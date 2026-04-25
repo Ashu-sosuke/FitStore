@@ -14,142 +14,88 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.gymfitness.R
 import com.example.gymfitness.presentation.navigation.Screen
-import com.example.gymfitness.ui.theme.BgDark
 import com.example.gymfitness.ui.theme.GreenPrimary
-import com.example.gymfitness.ui.theme.TextGray
-import com.example.gymfitness.ui.theme.TextWhite
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GetStart(navController: NavController) {
-    Scaffold(
-        containerColor = BgDark,
-        topBar = {
-            CenterAlignedTopAppBar(
-                windowInsets = WindowInsets(0, 0),
-                title = {
-                    Text(
-                        "FITSTORE",
-                        color = GreenPrimary,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 4.sp // Increased spacing for branding feel
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = BgDark.copy(alpha = 0.9f) // Slight transparency
-                )
-            )
-        }
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 1. Full Screen Background Image
+        Image(
+            painter = painterResource(R.drawable.b2d3a8fe2d64f98ca2ebea9744a06e78),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop // Important to fill the screen
+        )
+
+        // 2. Bottom Gradient Overlay (Makes text readable)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Neon Glow Background Effect
-            Box(
-                modifier = Modifier
-                    .size(400.dp)
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-100).dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                GreenPrimary.copy(alpha = 0.12f),
-                                Color.Transparent
-                            )
-                        )
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.5f),
+                            Color.Black
+                        ),
+                        startY = 300f // Starts gradient mid-screen
                     )
+                )
+        )
+
+        // 3. Content Overlay
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 30.dp, vertical = 50.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.Start // Left aligned like the image
+        ) {
+            Text(
+                text = "Care for\nYour Health\nCompanion",
+                color = Color.White,
+                fontSize = 48.sp, // Large impactful font
+                lineHeight = 52.sp,
+                fontWeight = FontWeight.Black
             )
 
-            Column(
+            Spacer(Modifier.height(24.dp))
+
+            Text(
+                text = "Your health is your greatest asset—nurture it with mindful choices, regular activity, and balanced habits.",
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Start
+            )
+
+            Spacer(Modifier.height(48.dp))
+
+            // 4. Large Neon Button
+            Button(
+                onClick = {
+                    navController.navigate(Screen.Onboarding.route)
+                },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .height(80.dp), // Taller button as seen in reference
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GreenPrimary,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(40.dp) // Very rounded
             ) {
-                // Hero Image with better scaling
-                Image(
-                    painter = painterResource(R.drawable.b2d3a8fe2d64f98ca2ebea9744a06e78),
-                    contentDescription = "Gym Hero Image",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1.2f)
-                        .padding(bottom = 24.dp)
+                Text(
+                    text = "Get Started",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
-
-                // Text Content Area
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(0.8f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Transform Your\nBody & Mind",
-                        color = TextWhite,
-                        fontSize = 32.sp,
-                        lineHeight = 38.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    Text(
-                        text = "The ultimate companion for your fitness journey. Track, analyze, and conquer your goals.",
-                        color = TextGray,
-                        fontSize = 15.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 22.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-                }
-
-                // CTA Button Section
-                Spacer(Modifier.height(24.dp))
-
-                Button(
-                    onClick = {
-                        navController.navigate(Screen.Onboarding.route)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp), // Slightly taller for premium feel
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = GreenPrimary,
-                        contentColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(20.dp), // Softer corners
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 12.dp)
-                ) {
-                    Text(
-                        "GET STARTED",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GetStartPreview() {
-    val navController = rememberNavController()
-    GetStart(navController)
 }
