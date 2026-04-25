@@ -16,7 +16,9 @@ import com.example.gymfitness.presentation.navigation.Navigation
 import com.example.gymfitness.presentation.screen.home.HomeScreen
 import com.example.gymfitness.ui.theme.BgDark
 import com.example.gymfitness.ui.theme.GymFitnessTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

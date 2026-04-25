@@ -1,11 +1,12 @@
 package com.example.gymfitness.presentation.componts
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -34,56 +35,57 @@ fun BottomNavBar(navController: NavController) {
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar(
-        containerColor = NavBg,
-        tonalElevation = 0.dp,
-        modifier = Modifier.height(70.dp)
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(30.dp)),
+        color = NavBg,
+        shadowElevation = 8.dp
     ) {
 
-        items.forEach { item ->
+        NavigationBar(
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+            modifier = Modifier.height(70.dp)
+        ) {
 
-            NavigationBarItem(
+            items.forEach { item ->
 
-                selected = currentRoute == item.route,
+                NavigationBarItem(
 
-                onClick = {
+                    selected = currentRoute == item.route,
 
-                    navController.navigate(item.route) {
+                    onClick = {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
 
-                        popUpTo(navController.graph.startDestinationId)
+                    icon = {
+                        Icon(
+                            painter = painterResource(item.icon),
+                            contentDescription = item.label,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
 
-                        launchSingleTop = true
+                    label = {
+                        Text(item.label)
+                    },
 
-                        restoreState = true
-                    }
-
-                },
-
-                icon = {
-
-                    Icon(
-                        painter = painterResource(item.icon),
-                        contentDescription = item.label,
-                        modifier = Modifier.size(22.dp)
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = GreenPrimary,
+                        selectedTextColor = GreenPrimary,
+                        unselectedIconColor = TextGray,
+                        unselectedTextColor = TextGray,
+                        indicatorColor = Color.Transparent
                     )
-
-                },
-
-                label = {
-                    Text(item.label)
-                },
-
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = GreenPrimary,
-                    selectedTextColor = GreenPrimary,
-                    unselectedIconColor = TextGray,
-                    unselectedTextColor = TextGray,
-                    indicatorColor = Color.Transparent
                 )
-            )
+            }
         }
     }
 }
