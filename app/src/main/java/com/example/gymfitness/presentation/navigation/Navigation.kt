@@ -9,8 +9,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -22,15 +22,15 @@ import com.example.gymfitness.presentation.screen.profile.ProfileScreen
 import com.example.gymfitness.presentation.screen.workouts.WorkoutScreen
 import com.example.gymfitness.presentation.viewmodel.HomeViewModel
 import com.example.gymfitness.presentation.viewmodel.UserViewModel
-import com.example.gymfitness.ui.theme.BgDark
-import com.example.gymfitness.ui.theme.GreenPrimary
+import com.example.gymfitness.ui.theme.BgLight // Updated
+import com.example.gymfitness.ui.theme.AccentBlue // Updated
 
 @Composable
 fun Navigation() {
     val navController = rememberNavController()
     val userViewModel: UserViewModel = hiltViewModel()
 
-    // Check if user is already in DB
+    // Check if user is already in DB (Session Management)
     val startDestination by userViewModel.startDestination.collectAsState()
 
     // Wait for the ViewModel to check the database
@@ -39,12 +39,12 @@ fun Navigation() {
             navController = navController,
             startDestination = startDestination!!
         ) {
-            // 1. Professional Entrance
+            // 1. Entrance Splash
             composable(route = Screen.GetStart.route) {
                 GetStart(navController = navController)
             }
 
-            // 2. Data Entry
+            // 2. Multi-Step Onboarding
             composable(route = Screen.Onboarding.route) {
                 OnboardingScreen(navController = navController)
             }
@@ -62,17 +62,21 @@ fun Navigation() {
             composable(route = Screen.Meal.route) {
                 MealScreen(navController)
             }
-            composable(Screen.Profile.route){
+            composable(route = Screen.Profile.route) {
                 ProfileScreen(navController)
             }
         }
     } else {
-        // Optional: A loading state while checking the DB
         Box(
-            modifier = Modifier.fillMaxSize().background(BgDark),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(BgLight), // Soft White
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = GreenPrimary)
+            CircularProgressIndicator(
+                color = AccentBlue, // Modern Blue
+                strokeWidth = 4.dp
+            )
         }
     }
 }

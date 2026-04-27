@@ -32,7 +32,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = BgLight, // Soft White background
         bottomBar = { BottomNavBar(navController = navController) }
     ) { innerPadding ->
         Column(
@@ -44,12 +44,12 @@ fun HomeScreen(
         ) {
             Spacer(Modifier.height(24.dp))
 
-            // Header with more "breathable" spacing
+            // Updated for White Theme
             TopHeaderSection(userName = "Alex")
 
             Spacer(Modifier.height(28.dp))
 
-            // Main Animated Calorie Card
+            // Modern Gauge with Blue Accents
             MainAnimatedCalorieCard(
                 calories = state.caloriesEaten,
                 target = state.caloriesTarget
@@ -59,7 +59,7 @@ fun HomeScreen(
 
             Text(
                 text = "Nutrition Breakdown",
-                color = TextWhite,
+                color = TextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp)
@@ -67,22 +67,21 @@ fun HomeScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Grid with improved spacing and internal padding
+            // Macro Grid with White Surface Cards
             MacroGridSection(state)
 
             Spacer(Modifier.height(32.dp))
 
-            // Large Action Banner
+            // Premium Blue Action Banner
             WorkoutActionBanner()
 
-            Spacer(Modifier.height(24.dp)) // Padding for the floating bottom bar
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
 fun MainAnimatedCalorieCard(calories: Float, target: Float) {
-    // Progress sweep animation
     val progress = if (target > 0) (calories / target).coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -90,18 +89,13 @@ fun MainAnimatedCalorieCard(calories: Float, target: Float) {
         label = "gauge"
     )
 
-    // Number counting animation
-    val animatedCount by animateIntAsState(
-        targetValue = calories.toInt(),
-        animationSpec = tween(1400),
-        label = "count"
-    )
+    val animatedCount by animateIntAsState(targetValue = calories.toInt(), animationSpec = tween(1400))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
         shape = RoundedCornerShape(32.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)) // Subtle border for definition
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Professional depth
     ) {
         Row(
             modifier = Modifier.padding(28.dp),
@@ -110,74 +104,36 @@ fun MainAnimatedCalorieCard(calories: Float, target: Float) {
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(145.dp)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Track
                     drawArc(
-                        color = Color.White.copy(alpha = 0.05f),
+                        color = BorderGray, // Muted track
                         startAngle = 140f,
                         sweepAngle = 260f,
                         useCenter = false,
-                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
                     )
-                    // Animated Progress
                     drawArc(
-                        brush = Brush.linearGradient(listOf(GreenMuted, GreenPrimary)),
+                        brush = Brush.linearGradient(listOf(AccentBlue.copy(0.7f), AccentBlue)),
                         startAngle = 140f,
                         sweepAngle = 260f * animatedProgress,
                         useCenter = false,
-                        style = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "$animatedCount",
-                        color = TextWhite,
+                        color = TextPrimary,
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Black
                     )
-                    Text("kcal", color = TextGray, fontSize = 14.sp)
+                    Text("kcal", color = TextSecondary, fontSize = 14.sp)
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                StatLabel("Target", "${target.toInt()} kcal", GreenPrimary)
-                StatLabel("Left", "${(target - calories).toInt()} kcal", TextGray)
+                StatLabel("Target", "${target.toInt()} kcal", AccentBlue)
+                StatLabel("Left", "${(target - calories).toInt()} kcal", TextSecondary)
             }
-        }
-    }
-}
-
-@Composable
-fun MacroGridSection(state: com.example.gymfitness.presentation.state.HomeState) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        MacroDetailCard(
-            label = "Protein",
-            value = "${state.protein.toInt()}g",
-            target = "180g",
-            progress = state.protein / 180f,
-            color = GreenPrimary,
-            icon = R.drawable.baseline_local_fire_department_24,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            MacroDetailCard(
-                label = "Carbs",
-                value = "${state.carbs.toInt()}g",
-                target = "220g",
-                progress = state.carbs / 220f,
-                color = Color(0xFFFF9800),
-                icon = R.drawable.baseline_local_fire_department_24,
-                modifier = Modifier.weight(1f)
-            )
-            MacroDetailCard(
-                label = "Fats",
-                value = "${state.fat.toInt()}g",
-                target = "70g",
-                progress = state.fat / 70f,
-                color = Color(0xFF00BCD4),
-                icon = R.drawable.baseline_local_fire_department_24,
-                modifier = Modifier.weight(1f)
-            )
         }
     }
 }
@@ -192,34 +148,31 @@ fun MacroDetailCard(
     icon: Int,
     modifier: Modifier = Modifier
 ) {
-    // Local animation for progress lines
-    val lineProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(1000, delayMillis = 500)
-    )
+    val lineProgress by animateFloatAsState(targetValue = progress.coerceIn(0f, 1f), animationSpec = tween(1000))
 
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        border = BorderStroke(1.dp, BorderGray) // Clean border
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(icon), contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(label, color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text(" / $target", color = TextGray, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp, start = 4.dp))
+                Text(value, color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text(" / $target", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 3.dp, start = 4.dp))
             }
             Spacer(Modifier.height(14.dp))
             LinearProgressIndicator(
                 progress = { lineProgress },
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                 color = color,
-                trackColor = Color.Black.copy(alpha = 0.3f),
+                trackColor = BorderGray,
             )
         }
     }
@@ -233,14 +186,14 @@ fun TopHeaderSection(userName: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text("Keep it up,", color = TextGray, fontSize = 14.sp)
-            Text("Hello $userName! 🔥", color = TextWhite, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+            Text("Keep it up,", color = TextSecondary, fontSize = 14.sp)
+            Text("Hello $userName! 👋", color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
         }
         IconButton(
             onClick = { },
-            modifier = Modifier.background(CardDark, CircleShape)
+            modifier = Modifier.background(SurfaceWhite, CircleShape).border(1.dp, BorderGray, CircleShape)
         ) {
-            Icon(Icons.Default.Notifications, contentDescription = null, tint = TextWhite)
+            Icon(Icons.Default.Notifications, contentDescription = null, tint = TextPrimary)
         }
     }
 }
@@ -252,20 +205,20 @@ fun WorkoutActionBanner() {
             .fillMaxWidth()
             .height(110.dp)
             .clip(RoundedCornerShape(28.dp))
-            .background(Brush.horizontalGradient(listOf(GreenMuted, GreenPrimary)))
+            .background(Brush.horizontalGradient(listOf(AccentBlue, Color(0xFF00D1FF))))
             .clickable { }
             .padding(24.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Ready to sweat?", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                Text("Start your daily workout session", color = Color.Black.copy(alpha = 0.8f), fontSize = 13.sp)
+                Text("Ready to sweat?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text("Start your daily session", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
             }
             Icon(
-                painter = painterResource(R.drawable.gym_1025878),
+                painter = painterResource(R.drawable.gym_1025878), // Ensure this exists
                 contentDescription = null,
-                tint = Color.Black,
+                tint = Color.White,
                 modifier = Modifier.size(45.dp)
             )
         }
@@ -273,9 +226,51 @@ fun WorkoutActionBanner() {
 }
 
 @Composable
+fun MacroGridSection(state: com.example.gymfitness.presentation.state.HomeState) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Protein (Full Width for emphasis)
+        MacroDetailCard(
+            label = "Protein",
+            value = "${state.protein.toInt()}g",
+            target = "${state.proteinTarget.toInt()}g", // Using dynamic target from state
+            progress = state.protein / state.proteinTarget,
+            color = AccentBlue, // Your new modern accent
+            icon = R.drawable.baseline_local_fire_department_24,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Carbs and Fats (Side by Side)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            MacroDetailCard(
+                label = "Carbs",
+                value = "${state.carbs.toInt()}g",
+                target = "${state.carbsTarget.toInt()}g",
+                progress = state.carbs / state.carbsTarget,
+                color = Color(0xFFFF9800), // Energetic Orange
+                icon = R.drawable.baseline_local_fire_department_24,
+                modifier = Modifier.weight(1f)
+            )
+            MacroDetailCard(
+                label = "Fats",
+                value = "${state.fat.toInt()}g",
+                target = "${state.fatTarget.toInt()}g",
+                progress = state.fat / state.fatTarget,
+                color = Color(0xFF00D1FF), // Sleek Cyan
+                icon = R.drawable.baseline_local_fire_department_24,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+
+@Composable
 fun StatLabel(label: String, value: String, color: Color) {
     Column {
-        Text(label, color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }

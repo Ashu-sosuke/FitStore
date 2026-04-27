@@ -1,9 +1,8 @@
 package com.example.gymfitness.presentation.screen.profile
 
-
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-
-// Internal Project Imports
 import com.example.gymfitness.presentation.componts.BottomNavBar
 import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.presentation.viewmodel.HomeViewModel
@@ -38,7 +35,7 @@ fun ProfileScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = BgLight, // Soft white background
         bottomBar = { BottomNavBar(navController) }
     ) { padding ->
         Column(
@@ -48,19 +45,22 @@ fun ProfileScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Header
+            Spacer(Modifier.height(20.dp))
+
+            // Profile Header - Clean White Surface
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(110.dp)
                     .clip(CircleShape)
-                    .background(CardDark),
+                    .background(SurfaceWhite)
+                    .border(2.dp, BorderGray, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Person,
-                    contentDescription = null,
-                    tint = GreenPrimary,
-                    modifier = Modifier.size(50.dp)
+                    contentDescription = "Profile Picture",
+                    tint = AccentBlue,
+                    modifier = Modifier.size(55.dp)
                 )
             }
 
@@ -68,14 +68,14 @@ fun ProfileScreen(
 
             Text(
                 text = "My Profile",
-                color = TextWhite,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                color = TextPrimary,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Black
             )
 
             Spacer(Modifier.height(32.dp))
 
-            // User Stats Card
+            // User Stats Card - Modern Surface
             ProfileInfoCard(
                 weight = "${userState.latestWeight ?: "--"} kg",
                 target = "${userState.caloriesTarget.toInt()} kcal"
@@ -84,38 +84,55 @@ fun ProfileScreen(
             Spacer(Modifier.weight(1f))
 
             // Danger Zone Section
-            Text(
-                "Danger Zone",
-                color = Color.Red.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                modifier = Modifier.align(Alignment.Start)
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Danger Zone",
+                    color = Color.Red.copy(alpha = 0.8f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
 
-            Button(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1414)),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f))
-            ) {
-                Text("RESET ALL DATA", color = Color.Red, fontWeight = FontWeight.Bold)
+                // Professional Reset Button - Soft Red Tint
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFEBEE), // Very light red
+                        contentColor = Color.Red
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.2f))
+                ) {
+                    Text(
+                        "RESET ALL DATA",
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
 
             Spacer(Modifier.height(20.dp))
         }
     }
 
-    // Confirmation Dialog
+    // Confirmation Dialog - Modern Light Style
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = CardDark,
-            title = { Text("Reset Progress?", color = TextWhite) },
-            text = { Text("This will permanently delete your profile and all fitness data.", color = TextGray) },
+            containerColor = SurfaceWhite,
+            title = {
+                Text("Reset Progress?", color = TextPrimary, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "This will permanently delete your profile and all fitness data. You will need to set up your account again.",
+                    color = TextSecondary
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.logoutAndClearData {
@@ -124,12 +141,12 @@ fun ProfileScreen(
                         }
                     }
                 }) {
-                    Text("YES, DELETE", color = Color.Red)
+                    Text("YES, DELETE", color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("CANCEL", color = TextWhite)
+                    Text("CANCEL", color = TextPrimary)
                 }
             }
         )
@@ -140,22 +157,29 @@ fun ProfileScreen(
 fun ProfileInfoCard(weight: String, target: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        shape = RoundedCornerShape(24.dp)
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(28.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Weight", color = TextGray, fontSize = 12.sp)
-                Text(weight, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Weight", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(weight, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
-            Box(modifier = Modifier.width(1.dp).height(30.dp).background(TextGray.copy(alpha = 0.2f)))
+            // Vertical Divider
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(35.dp)
+                    .background(BorderGray)
+            )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Daily Goal", color = TextGray, fontSize = 12.sp)
-                Text(target, color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Daily Goal", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(target, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

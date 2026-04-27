@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymfitness.presentation.navigation.Navigation
 import com.example.gymfitness.presentation.screen.home.HomeScreen
-import com.example.gymfitness.ui.theme.BgDark
+import com.example.gymfitness.ui.theme.BgLight
 import com.example.gymfitness.ui.theme.GymFitnessTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
             GymFitnessTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = BgDark
+                    color = BgLight
                 ) {
                     Navigation()
                 }

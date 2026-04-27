@@ -19,20 +19,20 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.gymfitness.R
 import com.example.gymfitness.presentation.navigation.Screen
-import com.example.gymfitness.ui.theme.GreenPrimary
+import com.example.gymfitness.ui.theme.GymGreenDark
 
 @Composable
 fun GetStart(navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 1. Full Screen Background Image
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+
         Image(
             painter = painterResource(R.drawable.b2d3a8fe2d64f98ca2ebea9744a06e78),
-            contentDescription = null,
+            contentDescription = "Gym Background",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop // Important to fill the screen
+            contentScale = ContentScale.Crop,
+            alpha = 0.9f // Keep it bright
         )
 
-        // 2. Bottom Gradient Overlay (Makes text readable)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -40,60 +40,70 @@ fun GetStart(navController: NavController) {
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.5f),
-                            Color.Black
+                            Color.Black.copy(alpha = 0.2f), // Subtle dimming for the mid-section
+                            Color.Black.copy(alpha = 0.8f)  // Stronger at bottom for text pop
                         ),
-                        startY = 300f // Starts gradient mid-screen
+                        startY = 400f
                     )
                 )
         )
 
-        // 3. Content Overlay
+        // 3. Branding & Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 30.dp, vertical = 50.dp),
+                .padding(horizontal = 32.dp, vertical = 60.dp),
             verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.Start // Left aligned like the image
+            horizontalAlignment = Alignment.Start
         ) {
+
+
             Text(
                 text = "Care for\nYour Health\nCompanion",
                 color = Color.White,
-                fontSize = 48.sp, // Large impactful font
-                lineHeight = 52.sp,
-                fontWeight = FontWeight.Black
+                fontSize = 44.sp,
+                lineHeight = 50.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "Your health is your greatest asset—nurture it with mindful choices, regular activity, and balanced habits.",
+                text = "Your health is your greatest asset—nurture it with mindful choices and regular activity.",
                 color = Color.White.copy(alpha = 0.8f),
                 fontSize = 16.sp,
-                lineHeight = 22.sp,
-                textAlign = TextAlign.Start
+                lineHeight = 24.sp,
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth(0.9f)
             )
 
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(40.dp))
 
-            // 4. Large Neon Button
+            // 4. Premium Electric Blue CTA Button
             Button(
                 onClick = {
                     navController.navigate(Screen.Onboarding.route)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp), // Taller button as seen in reference
+                    .height(72.dp), // Premium taller height
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenPrimary,
-                    contentColor = Color.Black
+                    containerColor = GymGreenDark,
+                    contentColor = Color.White
                 ),
-                shape = RoundedCornerShape(40.dp) // Very rounded
+                shape = RoundedCornerShape(20.dp), // Sleeker 2026 rounded style
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 12.dp,
+                    pressedElevation = 4.dp
+                )
             ) {
                 Text(
                     text = "Get Started",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
                 )
             }
         }

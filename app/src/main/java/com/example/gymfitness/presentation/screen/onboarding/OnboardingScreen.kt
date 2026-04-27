@@ -1,10 +1,12 @@
 package com.example.gymfitness.presentation.screen.onboarding
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,45 +42,65 @@ import com.example.gymfitness.ui.theme.*
 @Composable
 fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hiltViewModel()) {
 
+    val CyberLime = Color(0xFFD0FD3E)
+
+// Determine if the button should be active
+    val isEnabled = if (viewModel.currentStep == 1) {
+        viewModel.name.isNotEmpty() && viewModel.age.isNotEmpty()
+    } else true
+
+    // Dynamic background based on gender selection
     val backgroundImage = if (viewModel.gender == "Male") {
         R.drawable._9e84ac439f8ba294d6f17a2f2a64cd1
     } else {
         R.drawable._f6b749fe68be3833acc6ee7a151ffd1
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        // Background with Crossfade for smooth gender switching
+    Box(modifier = Modifier.fillMaxSize().background(BgLight)) {
+        // High-Key Background (Dimmed to keep UI crisp)
         Crossfade(targetState = backgroundImage, animationSpec = tween(700), label = "bg") { targetImg ->
             Image(
                 painter = painterResource(targetImg),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                alpha = 0.8f // Subtle visibility for light theme
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(
-            listOf(Color.Transparent, Color.Black.copy(0.7f), Color.Black)
-        )))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.4f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.6f)
+                        )
+                    )
+                )
+        )
+
 
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(48.dp))
 
-            // Animated Progress Indicator
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Professional Step Indicator
+            Row(Modifier.width(100.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(3) { index ->
                     val color by animateColorAsState(
-                        if (index <= viewModel.currentStep) GreenPrimary else Color.Gray.copy(0.3f),
+                        if (index <= viewModel.currentStep) GymGreenDark else BorderGray,
                         label = "progress"
                     )
-                    Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(color))
+                    Box(modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape).background(color))
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
 
             // Animated Step Transitions
             Box(modifier = Modifier.weight(1f)) {
@@ -112,19 +135,7 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // If Back arrow isn't enough, we keep the Outlined button or remove based on your preference
-                // For "Full Width" feel on Step 0, we only show one button
-                if (viewModel.currentStep > 0) {
-                    OutlinedButton(
-                        onClick = { viewModel.previousStep() },
-                        modifier = Modifier.weight(1f).height(64.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, GreenPrimary.copy(0.5f))
-                    ) {
-                        Text("BACK", color = GreenPrimary, fontWeight = FontWeight.Bold)
-                    }
-                }
-
+                // Primary Action Button (Full Width when Step 0)
                 Button(
                     onClick = {
                         if (viewModel.currentStep < 2) {
@@ -137,10 +148,20 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
                             }
                         }
                     },
-                    modifier = Modifier.weight(2f).height(64.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        // Adding a subtle glow effect to match the "High-Energy" theme
+                        .shadow(
+                            elevation = if (isEnabled) 12.dp else 0.dp,
+                            shape = RoundedCornerShape(20.dp),
+                            spotColor = CyberLime.copy(alpha = 0.5f)
+                        ),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GreenPrimary,
-                        disabledContainerColor = Color.Gray.copy(alpha = 0.2f)
+                        containerColor = Color(0xFFD0FD3E), // Matching the "Athletic" green
+                        contentColor = Color.Black,          // Black text on Lime is more premium
+                        disabledContainerColor = Color.White.copy(alpha = 0.1f),
+                        disabledContentColor = Color.White.copy(alpha = 0.3f)
                     ),
                     shape = RoundedCornerShape(20.dp),
                     enabled = if (viewModel.currentStep == 1) {
@@ -149,10 +170,10 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
                     } else true
                 ) {
                     Text(
-                        text = if (viewModel.currentStep < 2) "CONTINUE" else "FINISH",
-                        color = Color.Black,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        text = if (viewModel.currentStep < 2) "CONTINUE" else "GET STARTED",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
                     )
                 }
             }
@@ -163,9 +184,9 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
 
 @Composable
 fun GenderStep(viewModel: UserViewModel) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Select Gender", color = TextWhite, fontSize = 32.sp, fontWeight = FontWeight.Black)
-        Text("We use this to calculate your metabolic rate.", color = TextGray, fontSize = 14.sp)
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        Text("Select Gender", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+        Text("Personalized for your biology.", color = TextSecondary, fontSize = 15.sp)
         Spacer(Modifier.height(48.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SelectionCard("Male", viewModel.gender == "Male", { viewModel.gender = "Male" }, Modifier.weight(1f).height(180.dp))
@@ -180,12 +201,14 @@ fun DetailsStep(viewModel: UserViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = { viewModel.previousStep() },
-                modifier = Modifier.background(Color.White.copy(0.1f), CircleShape).size(40.dp)
+                modifier = Modifier
+                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    .size(40.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = GreenPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White)
             }
             Spacer(Modifier.width(16.dp))
-            Text("About You", color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Black)
+            Text("About You", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.height(32.dp))
         OnboardingTextField(viewModel.name, "Full Name", KeyboardType.Text) { viewModel.name = it }
@@ -207,49 +230,116 @@ fun GoalStep(viewModel: UserViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = { viewModel.previousStep() },
-                modifier = Modifier.background(Color.White.copy(0.1f), CircleShape).size(40.dp)
+                modifier = Modifier
+                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    .size(40.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = GreenPrimary)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = Color.White // Keep arrow visible
+                )
             }
             Spacer(Modifier.width(16.dp))
-            Text(title, color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(
+                title,
+                color = Color.White, // CRITICAL: Change to White
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black
+            )
         }
+
         Spacer(Modifier.height(32.dp))
+
         goals.forEach { item ->
-            SelectionCard(item, viewModel.goal == item, { viewModel.goal = item }, Modifier.fillMaxWidth().padding(vertical = 8.dp).height(75.dp))
+            SelectionCard(
+                label = item,
+                isSelected = viewModel.goal == item,
+                onClick = { viewModel.goal = item },
+                modifier = Modifier
+                    .padding(vertical = 6.dp)
+                    .height(70.dp)
+            )
         }
     }
 }
 
 @Composable
-fun OnboardingTextField(value: String, label: String, kbType: KeyboardType, onValueChange: (String) -> Unit) {
+fun OnboardingTextField(
+    value: String,
+    label: String,
+    kbType: KeyboardType,
+    onValueChange: (String) -> Unit
+) {
     OutlinedTextField(
-        value = value, onValueChange = onValueChange,
-        label = { Text(label, color = TextGray) },
-        modifier = Modifier.fillMaxWidth().height(64.dp),
-        shape = RoundedCornerShape(16.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = kbType, imeAction = ImeAction.Next),
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = Color.White.copy(alpha = 0.7f)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        // Modern rounded corners
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = kbType,
+            imeAction = ImeAction.Next
+        ),
+        singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = TextWhite, unfocusedTextColor = TextWhite,
-            focusedBorderColor = GreenPrimary, unfocusedBorderColor = Color.White.copy(0.1f),
-            focusedContainerColor = Color.Black.copy(0.3f), unfocusedContainerColor = Color.Black.copy(0.3f)
+            focusedContainerColor = Color.White.copy(alpha = 0.1f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White,
+
+            focusedBorderColor = Color(0xFFD0FD3E), // That Cyber Lime
+            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+
+            cursorColor = Color(0xFFD0FD3E)
         )
     )
 }
 
 @Composable
-fun SelectionCard(label: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bgColor by animateColorAsState(if (isSelected) GreenPrimary else Color.Black.copy(0.4f), label = "cardBg")
-    val contentColor by animateColorAsState(if (isSelected) Color.Black else TextWhite, label = "content")
+fun SelectionCard(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Dynamic colors for reactivity
+    val bgColor by animateColorAsState(
+        if (isSelected) Color(0xFFD0FD3E).copy(alpha = 0.9f) // Bright Green when picked
+        else Color.White.copy(alpha = 0.1f), // Subtle glass look when not
+        label = "cardBg"
+    )
+    val textColor by animateColorAsState(
+        if (isSelected) Color.Black else Color.White,
+        label = "textColor"
+    )
+    val borderAlpha by animateFloatAsState(if (isSelected) 1f else 0.3f, label = "border")
 
     Surface(
-        modifier = modifier.clip(RoundedCornerShape(20.dp)).clickable { onClick() },
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() },
         color = bgColor,
-        border = if (isSelected) null else BorderStroke(1.dp, Color.White.copy(0.1f)),
-        shape = RoundedCornerShape(20.dp)
+        // Glowing border for selected item
+        border = BorderStroke(1.dp, if (isSelected) Color(0xFFD0FD3E) else Color.White.copy(alpha = 0.2f)),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = if (isSelected) 10.dp else 0.dp
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = label, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Box(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center // Left aligned feels more modern
+        ) {
+            Text(
+                text = label,
+                color = textColor,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
