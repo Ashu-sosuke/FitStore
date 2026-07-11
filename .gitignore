@@ -36,3 +36,11 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Local Documentation / Notes
+brain.md
+implementation_plan.md
+memory.md
+project_analysis.md
+requirements.md
+
+
