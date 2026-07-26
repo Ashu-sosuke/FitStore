@@ -14,28 +14,28 @@ FitStore employs a split-tier architecture combining a **Native Kotlin Android C
 
 ```mermaid
 graph TD
-    subgraph Android App [Android Device (Kotlin / Jetpack Compose)]
-        UI[Compose UI / Dashboard] <--> VM[ViewModels MVI/MVVM]
-        VM <--> Domain[Domain Layer / UseCases]
-        Domain <--> Repo[Repository Layer]
-        Repo <--> Room[(Room Database Local SQLite)]
-        Repo <--> Retrofit[Retrofit HTTP Client]
-        WM[WorkManager SyncWorker] <--> Room
+    subgraph AndroidApp ["Android Device (Kotlin / Jetpack Compose)"]
+        UI["Compose UI / Dashboard"] <--> VM["ViewModels (MVI / MVVM)"]
+        VM <--> Domain["Domain Layer / UseCases"]
+        Domain <--> Repo["Repository Layer"]
+        Repo <--> Room[("Room Database Local SQLite")]
+        Repo <--> Retrofit["Retrofit HTTP Client"]
+        WM["WorkManager SyncWorker"] <--> Room
         WM <--> Retrofit
-        Cam[CameraX & Background Analyzer] -- "Multipart JPEG" --> FoodAPI
+        Cam["CameraX & Background Analyzer"] -- "Multipart JPEG" --> FoodAPI
     end
 
-    subgraph Backend [Python Microservices Stack]
-        MainAPI[Main API Service - Port 5000]
-        FoodAPI[AI Food Analyser Service - Port 8000]
-        PyTorch[PyTorch MobileNetV2 Model]
+    subgraph Backend ["Python Microservices Stack"]
+        MainAPI["Main API Service (Port 5000)"]
+        FoodAPI["AI Food Analyser Service (Port 8000)"]
+        PyTorch["PyTorch MobileNetV2 Model"]
     end
 
-    subgraph Database [Cloud Layer]
-        Mongo[(MongoDB Atlas Cluster)]
+    subgraph Database ["Cloud Layer"]
+        Mongo[("MongoDB Atlas Cluster")]
     end
 
-    Retrofit <-->|REST & JWT| MainAPI
+    Retrofit <-->|"REST & JWT"| MainAPI
     MainAPI <--> Mongo
     FoodAPI --> PyTorch
     FoodAPI <--> Mongo
