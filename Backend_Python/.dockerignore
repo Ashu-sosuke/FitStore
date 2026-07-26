@@ -1,0 +1,12 @@
+venv
+__pycache__
+.env
+.git
+.idea
+*.pyc
+*.pyo
+*.pyd
+.db
+node_modules
+food-analyser/venv
+food-analyser/data
