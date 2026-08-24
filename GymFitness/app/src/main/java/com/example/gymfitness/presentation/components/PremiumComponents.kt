@@ -527,6 +527,8 @@ fun StepsBarChart(
     weeklySteps: List<DayStepEntry>,
     isHealthConnectGranted: Boolean = true,
     isLoading: Boolean = false,
+    selectedDate: LocalDate? = null,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     onConnectClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -588,7 +590,7 @@ fun StepsBarChart(
 
     val today = LocalDate.now()
     val maxSteps = maxOf(weeklySteps.maxOfOrNull { it.steps } ?: 10000, 5000)
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    var localSelectedIndex by remember { mutableStateOf<Int?>(null) }
 
     Row(
         modifier = modifier
@@ -604,30 +606,38 @@ fun StepsBarChart(
         }
 
         displayList.forEachIndexed { index, entry ->
-            val barHeightFraction = (entry.steps.toFloat() / maxSteps.toFloat()).coerceIn(0.08f, 1f)
+            val barHeightFraction = if (entry.steps > 0) {
+                (entry.steps.toFloat() / maxSteps.toFloat()).coerceIn(0.12f, 1f)
+            } else {
+                0.08f
+            }
             val isToday = entry.date == today
-            val isSelected = selectedIndex == index
-            val barColor = if (isToday) LimeGreen else if (isSelected) InfoBlue else SurfaceAltDark
+            val isSelected = (selectedDate != null && entry.date == selectedDate) || (selectedDate == null && localSelectedIndex == index)
+            val barColor = if (isToday) LimeGreen else if (isSelected) InfoBlue else if (entry.steps > 0) Color(0xFF2A4225) else SurfaceAltDark
+            val hasBadge = entry.steps > 0 || isToday || isSelected
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { selectedIndex = if (isSelected) null else index }
+                    .clickable { 
+                        localSelectedIndex = if (localSelectedIndex == index) null else index
+                        onDateSelected?.invoke(entry.date)
+                    }
             ) {
-                if (isToday || isSelected) {
+                if (hasBadge) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (isSelected) InfoBlue else LimeGreen)
+                            .background(if (isSelected) InfoBlue else if (isToday) LimeGreen else Color(0xFF2A4225))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = String.format(Locale.getDefault(), "%,d", entry.steps),
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF121212)
+                            color = if (isToday || isSelected) Color(0xFF121212) else OffWhite
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -636,15 +646,16 @@ fun StepsBarChart(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.45f)
-                        .fillMaxHeight(barHeightFraction - 0.12f)
+                        .fillMaxHeight(if (hasBadge) (barHeightFraction - 0.12f).coerceAtLeast(0.06f) else barHeightFraction)
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                         .background(barColor)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = entry.dayLabel,
-                    style = Typography.bodySmall,
-                    color = if (isToday) OffWhite else TextMutedDark
+                    style = Typography.bodySmall.copy(fontSize = 11.sp),
+                    color = if (isToday || isSelected) OffWhite else TextMutedDark,
+                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }

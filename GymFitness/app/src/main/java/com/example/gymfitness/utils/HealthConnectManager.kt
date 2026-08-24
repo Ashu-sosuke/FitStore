@@ -103,7 +103,10 @@ class HealthConnectManager @Inject constructor(
                 )
 
                 val response = healthConnectClient.readRecords(request)
-                val totalSteps = response.records.sumOf { it.count }.toInt()
+                var totalSteps = response.records.sumOf { it.count }.toInt()
+                if (i == 0 && _healthConnectSteps.value > totalSteps) {
+                    totalSteps = _healthConnectSteps.value
+                }
                 val dayLabel = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
 
                 dayEntries.add(DayStepEntry(date = date, dayLabel = dayLabel, steps = totalSteps))

@@ -25,20 +25,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.gymfitness.presentation.components.BaseCard
 import com.example.gymfitness.presentation.components.HeartRateLineChart
 import com.example.gymfitness.presentation.components.StepsBarChart
+import com.example.gymfitness.presentation.viewmodel.HomeViewModel
 import com.example.gymfitness.ui.theme.*
 import java.time.LocalDate
+import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalyticsScreen(navController: NavController) {
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+fun AnalyticsScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val today = LocalDate.now()
+    var selectedDate by remember { mutableStateOf(today) }
     val days = remember { (0..6).map { today.minusDays(it.toLong()) }.reversed() }
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchHealthConnectSteps()
+    }
+
+    // Match selected date in real Health Connect weekly steps history
+    val isSelectedToday = selectedDate == today
+    val selectedDayEntry = state.weeklySteps.find { it.date == selectedDate }
+
+    val currentDisplaySteps = if (isSelectedToday) {
+        maxOf(state.stepsWalked, selectedDayEntry?.steps ?: 0)
+    } else {
+        selectedDayEntry?.steps ?: 0
+    }
+
+    val currentDisplayDistance = String.format(Locale.getDefault(), "%.2f", currentDisplaySteps * 0.000762)
+    val currentDisplayCalories = (currentDisplaySteps * 0.04).toInt().toString()
 
     Scaffold(
         containerColor = PageBg,
@@ -73,13 +98,14 @@ fun AnalyticsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(days) { date ->
-                    val isToday = date == selectedDate
+                    val isSelected = date == selectedDate
+                    val isDayToday = date == today
                     val bgColor by animateColorAsState(
-                        targetValue = if (isToday) LimeGreen else SurfaceDark,
+                        targetValue = if (isSelected) LimeGreen else SurfaceDark,
                         label = "date_bg"
                     )
                     val textColor by animateColorAsState(
-                        targetValue = if (isToday) Color(0xFF121212) else OffWhite,
+                        targetValue = if (isSelected) Color(0xFF121212) else OffWhite,
                         label = "date_text"
                     )
 
@@ -96,7 +122,7 @@ fun AnalyticsScreen(navController: NavController) {
                             Text(
                                 text = date.dayOfWeek.name.take(3),
                                 style = Typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (isToday) Color(0xFF121212) else TextMutedDark
+                                color = if (isSelected) Color(0xFF121212) else if (isDayToday) LimeGreen else TextMutedDark
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
@@ -127,7 +153,11 @@ fun AnalyticsScreen(navController: NavController) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text("420", style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = OffWhite)
+                            Text(
+                                text = currentDisplayCalories,
+                                style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+                                color = if (currentDisplayCalories != "0") LimeGreen else OffWhite
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text("kcal", style = Typography.bodySmall, color = TextMutedDark)
                         }
@@ -147,7 +177,11 @@ fun AnalyticsScreen(navController: NavController) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text("4.8", style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = OffWhite)
+                            Text(
+                                text = currentDisplayDistance,
+                                style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+                                color = if (currentDisplayDistance != "0.00") Color(0xFF00E5FF) else OffWhite
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text("km", style = Typography.bodySmall, color = TextMutedDark)
                         }
@@ -177,7 +211,13 @@ fun AnalyticsScreen(navController: NavController) {
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                StepsBarChart(stepsData = listOf(8400, 6200, 11200, 7500, 9300, 5200, 10250))
+                StepsBarChart(
+                    weeklySteps = state.weeklySteps,
+                    isHealthConnectGranted = state.isHealthConnectGranted,
+                    isLoading = state.isLoading,
+                    selectedDate = selectedDate,
+                    onDateSelected = { selectedDate = it }
+                )
             }
 
             // Heart Rate Card with HeartRateLineChart
