@@ -402,7 +402,7 @@ fun ExerciseScheduleCard(exercise: GeneratedExercise) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val fullGifUrl = remember(exercise.gifUrl) {
                     if (exercise.gifUrl.startsWith("/")) {
-                        "http://192.168.29.171:5000${exercise.gifUrl}"
+                        "https://pulse-backend-6srs.onrender.com${exercise.gifUrl}"
                     } else {
                         exercise.gifUrl
                     }
