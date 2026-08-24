@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,23 +40,15 @@ fun GetStart(
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Handle auth success — route based on isNewUser
+    // Handle auth success — always route to Onboarding so user configures goals & routine
     LaunchedEffect(authState) {
         if (authState is AuthUiState.Success) {
             val successState = authState as AuthUiState.Success
-            if (successState.isNewUser) {
-                // New user: route to Onboarding so they can fill in their details
-                val encodedName = java.net.URLEncoder.encode(
-                    successState.displayName.ifEmpty { "" }, "UTF-8"
-                )
-                navController.navigate("onboarding_screen?displayName=$encodedName") {
-                    popUpTo(Screen.GetStart.route) { inclusive = true }
-                }
-            } else {
-                // Existing user: skip onboarding, go directly to Home
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(0) { inclusive = true }
-                }
+            val encodedName = java.net.URLEncoder.encode(
+                successState.displayName.ifEmpty { "" }, "UTF-8"
+            )
+            navController.navigate("onboarding_screen?displayName=$encodedName") {
+                popUpTo(Screen.GetStart.route) { inclusive = true }
             }
         }
     }
@@ -101,14 +94,30 @@ fun GetStart(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                // App Logo
-                Text(
-                    text = "GymFitness",
-                    style = Typography.headlineMedium.copy(color = Color.White),
+                // App Logo & Name
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .padding(top = 48.dp, start = 24.dp)
                         .statusBarsPadding()
-                )
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.pulse_logo),
+                        contentDescription = "Pulse Logo",
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "PULSE",
+                        style = Typography.headlineMedium.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp
+                        )
+                    )
+                }
             }
 
             // White rounded sheet sliding up from bottom

@@ -1,7 +1,6 @@
 package com.example.gymfitness.data.remote.api
 
-import com.example.gymfitness.data.remote.dto.WorkoutCreateDto
-import com.example.gymfitness.data.remote.dto.WorkoutDto
+import com.example.gymfitness.data.remote.dto.*
 import retrofit2.http.*
 
 interface WorkoutApiService {
@@ -17,4 +16,10 @@ interface WorkoutApiService {
 
     @GET("api/workouts/detail/{workoutId}")
     suspend fun getWorkoutDetail(@Path("workoutId") workoutId: String): WorkoutDto
+
+    @POST("api/workouts/generate-plan")
+    suspend fun generateWorkoutPlan(@Body request: PlanGenerationRequestDto): GeneratedWorkoutPlanDto
+
+    @POST("api/workouts/adopt-plan")
+    suspend fun adoptWorkoutPlan(@Body request: AdoptWorkoutPlanRequestDto): AdoptWorkoutPlanResponseDto
 }

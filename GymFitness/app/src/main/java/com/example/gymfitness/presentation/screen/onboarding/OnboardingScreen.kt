@@ -2,19 +2,20 @@ package com.example.gymfitness.presentation.screen.onboarding
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,17 +33,12 @@ import com.example.gymfitness.presentation.components.PrimaryInputField
 import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.presentation.viewmodel.UserViewModel
 import com.example.gymfitness.ui.theme.*
-import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hiltViewModel()) {
     
     var showCelebration by remember { mutableStateOf(false) }
-
-    val isEnabled = if (viewModel.currentStep == 1) {
-        viewModel.name.isNotEmpty() && viewModel.age.isNotEmpty() &&
-                viewModel.weight.isNotEmpty() && viewModel.height.isNotEmpty()
-    } else true
 
     if (showCelebration) {
         CelebrationScreen {
@@ -65,7 +61,7 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
             ) {
                 if (viewModel.currentStep > 0) {
                     IconButton(onClick = { viewModel.previousStep() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = InkBlack)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = OffWhite)
                     }
                 } else {
                     Spacer(modifier = Modifier.width(48.dp))
@@ -73,19 +69,19 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
                 
                 Spacer(modifier = Modifier.weight(1f))
                 
-                // Step Indicator (3 orange dots)
+                // Step Indicator (4 neon dots)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    repeat(3) { index ->
+                    repeat(4) { index ->
                         val width by animateDpAsState(
-                            targetValue = if (index == viewModel.currentStep) 24.dp else 8.dp,
+                            targetValue = if (index == viewModel.currentStep) 28.dp else 8.dp,
                             label = "stepIndicator"
                         )
-                        val color = if (index <= viewModel.currentStep) SunsetOrange else StrokeSoft
+                        val color = if (index <= viewModel.currentStep) LimeGreen else StrokeDark
                         Box(
                             modifier = Modifier
-                                .height(8.dp)
+                                .height(6.dp)
                                 .width(width)
-                                .clip(CircleShape)
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(color)
                         )
                     }
@@ -97,19 +93,25 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
         },
         bottomBar = {
             Box(modifier = Modifier.padding(24.dp).navigationBarsPadding()) {
-                PrimaryButton(
-                    text = if (viewModel.currentStep < 2) "Continue" else "Create My Plan",
-                    onClick = {
-                        if (viewModel.currentStep < 2) {
-                            viewModel.nextStep()
-                        } else {
-                            viewModel.saveUser {
-                                showCelebration = true
+                if (viewModel.isSavingUser) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = LimeGreen)
+                    }
+                } else {
+                    PrimaryButton(
+                        text = if (viewModel.currentStep < 3) "Continue ➔" else "Generate & Launch Plan ⚡",
+                        onClick = {
+                            if (viewModel.currentStep < 3) {
+                                viewModel.nextStep()
+                            } else {
+                                viewModel.saveUser {
+                                    showCelebration = true
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -133,13 +135,14 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
                         .fillMaxSize()
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.Start
                 ) {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     when (step) {
-                        0 -> GenderStep(viewModel)
-                        1 -> DetailsStep(viewModel)
-                        2 -> GoalStep(viewModel)
+                        0 -> IdentityStep(viewModel)
+                        1 -> BiometricsStep(viewModel)
+                        2 -> GoalAndExperienceStep(viewModel)
+                        3 -> ScheduleAndEquipmentStep(viewModel)
                     }
                     Spacer(modifier = Modifier.height(100.dp))
                 }
@@ -149,33 +152,104 @@ fun OnboardingScreen(navController: NavController, viewModel: UserViewModel = hi
 }
 
 @Composable
-fun GenderStep(viewModel: UserViewModel) {
+fun IdentityStep(viewModel: UserViewModel) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-        Text("Select Gender", color = InkBlack, style = Typography.displayLarge)
+        Text("Welcome to Pulse", color = OffWhite, style = Typography.displayLarge)
         Spacer(Modifier.height(8.dp))
-        Text("Personalized for your biology.", color = TextMuted, style = Typography.bodyLarge)
-        Spacer(Modifier.height(48.dp))
-        
-        // Horizontal Pill toggle
+        Text("Let's set up your personalized fitness & training engine.", color = TextMutedDark, style = Typography.bodyLarge)
+        Spacer(Modifier.height(32.dp))
+
+        Text("Your Name", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        PrimaryInputField(viewModel.name, { viewModel.name = it }, "Enter your name")
+
+        Spacer(Modifier.height(28.dp))
+        Text("Biological Gender", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+
         val genders = listOf("Male", "Female", "Other")
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             genders.forEach { gender ->
-                val isSelected = viewModel.gender == gender
-                Surface(
+                val isSelected = viewModel.gender.equals(gender, ignoreCase = true)
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp)
-                        .clip(CircleShape)
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) LimeGreen else SurfaceDark)
+                        .border(1.dp, if (isSelected) LimeGreen else StrokeDark, RoundedCornerShape(12.dp))
                         .clickable { viewModel.gender = gender },
-                    color = if (isSelected) SunsetOrange else SurfaceAlt,
-                    shape = CircleShape
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = gender,
-                            color = if (isSelected) Color.White else InkBlack,
-                            style = Typography.titleLarge
+                    Text(
+                        text = gender,
+                        color = if (isSelected) Color(0xFF121212) else OffWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BiometricsStep(viewModel: UserViewModel) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+        Text("Your Body Metrics", color = OffWhite, style = Typography.displayLarge)
+        Spacer(Modifier.height(8.dp))
+        Text("Used for exact BMR, macro targets, and compound volume load.", color = TextMutedDark, style = Typography.bodyLarge)
+        Spacer(Modifier.height(24.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Weight (kg)", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 13.sp)
+                Spacer(Modifier.height(6.dp))
+                PrimaryInputField(viewModel.weight, { viewModel.weight = it }, "e.g. 52.0")
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Height (cm)", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 13.sp)
+                Spacer(Modifier.height(6.dp))
+                PrimaryInputField(viewModel.height, { viewModel.height = it }, "e.g. 173.0")
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text("Age", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 13.sp)
+        Spacer(Modifier.height(6.dp))
+        PrimaryInputField(viewModel.age, { viewModel.age = it }, "e.g. 23")
+
+        Spacer(Modifier.height(24.dp))
+        Text("Daily Activity Level", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+
+        val activityLevels = listOf(
+            "Sedentary" to "Desk job, minimal walking",
+            "Moderate" to "Active daily lifestyle / gym 3-5x",
+            "Very" to "High physical intensity or athlete"
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            activityLevels.forEach { (level, desc) ->
+                val isSelected = viewModel.activityLevel.equals(level, ignoreCase = true)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.activityLevel = level }
+                        .border(1.dp, if (isSelected) LimeGreen else StrokeDark, RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = if (isSelected) LimeTintDark else SurfaceDark),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { viewModel.activityLevel = level },
+                            colors = RadioButtonDefaults.colors(selectedColor = LimeGreen)
                         )
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(level, fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+                            Text(desc, color = TextMutedDark, fontSize = 12.sp)
+                        }
                     }
                 }
             }
@@ -184,115 +258,221 @@ fun GenderStep(viewModel: UserViewModel) {
 }
 
 @Composable
-fun DetailsStep(viewModel: UserViewModel) {
+fun GoalAndExperienceStep(viewModel: UserViewModel) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-        Text("About You", color = InkBlack, style = Typography.displayLarge)
+        Text("Fitness Goal & Level", color = OffWhite, style = Typography.displayLarge)
         Spacer(Modifier.height(8.dp))
-        Text("Help us customize your fitness plan.", color = TextMuted, style = Typography.bodyLarge)
-        Spacer(Modifier.height(32.dp))
-        
-        PrimaryInputField(viewModel.name, { viewModel.name = it }, "Full Name")
-        Spacer(Modifier.height(16.dp))
-        PrimaryInputField(viewModel.age, { viewModel.age = it }, "Age")
-        Spacer(Modifier.height(16.dp))
-        PrimaryInputField(viewModel.weight, { viewModel.weight = it }, "Weight (kg)")
-        Spacer(Modifier.height(16.dp))
-        PrimaryInputField(viewModel.height, { viewModel.height = it }, "Height (cm)")
+        Text("Our AI tailors sets, rep ranges, and rest periods to your objective.", color = TextMutedDark, style = Typography.bodyLarge)
+        Spacer(Modifier.height(20.dp))
+
+        Text("Primary Objective", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+
+        val goals = listOf(
+            Triple("Gain Muscle", "💪 Bulk Up & Hypertrophy", "8-12 reps, 90s rest, mass builder"),
+            Triple("Lose Weight", "🔥 Cut & Fat Loss", "12-15 reps, 60s rest, metabolic conditioning"),
+            Triple("Strength", "⚡ Pure Strength", "4-6 reps, 150s rest, heavy compounds"),
+            Triple("Maintain", "⚖️ General Fitness", "10-12 reps, balanced volume")
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            goals.forEach { (id, title, desc) ->
+                val isSelected = viewModel.goal.equals(id, ignoreCase = true)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.goal = id }
+                        .border(1.dp, if (isSelected) LimeGreen else StrokeDark, RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = if (isSelected) LimeTintDark else SurfaceDark),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { viewModel.goal = id },
+                            colors = RadioButtonDefaults.colors(selectedColor = LimeGreen)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(title, fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+                            Text(desc, color = TextMutedDark, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Text("Lifting Experience", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+
+        val levels = listOf("beginner" to "Beginner (<6 mo)", "intermediate" to "Intermediate (6-24 mo)", "advanced" to "Advanced (2+ yrs)")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            levels.forEach { (id, label) ->
+                val isSel = viewModel.experienceLevel == id
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSel) LimeGreen else SurfaceDark)
+                        .border(1.dp, if (isSel) LimeGreen else StrokeDark, RoundedCornerShape(10.dp))
+                        .clickable { viewModel.experienceLevel = id },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSel) Color(0xFF121212) else OffWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GoalStep(viewModel: UserViewModel) {
-    var activityLevel by remember { mutableStateOf("Active") }
-    
+fun ScheduleAndEquipmentStep(viewModel: UserViewModel) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-        Text("Your Goal", color = InkBlack, style = Typography.displayLarge)
+        Text("Schedule & Gear", color = OffWhite, style = Typography.displayLarge)
         Spacer(Modifier.height(8.dp))
-        Text("What are you trying to achieve?", color = TextMuted, style = Typography.bodyLarge)
-        Spacer(Modifier.height(32.dp))
-        
-        val goals = listOf("Weight Loss", "Maintain", "Muscle Gain")
-        goals.forEach { item ->
-            val isSelected = viewModel.goal == item
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { viewModel.goal = item },
-                color = if (isSelected) OrangeTint else CardSurface,
-                border = BorderStroke(1.5.dp, if (isSelected) SunsetOrange else StrokeSoft),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp).height(48.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        Text("Tell us when and where you train to craft your weekly calendar.", color = TextMutedDark, style = Typography.bodyLarge)
+        Spacer(Modifier.height(20.dp))
+
+        Text("Workout Frequency (Days per Week)", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(2, 3, 4, 5, 6).forEach { days ->
+                val isSel = viewModel.daysPerWeek == days
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSel) LimeGreen else SurfaceDark)
+                        .border(1.dp, if (isSel) LimeGreen else StrokeDark, RoundedCornerShape(10.dp))
+                        .clickable { viewModel.daysPerWeek = days },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = item,
-                        color = if (isSelected) OrangeDeep else InkBlack,
-                        style = Typography.titleLarge,
-                        modifier = Modifier.weight(1f)
+                        text = "${days}d",
+                        color = if (isSel) Color(0xFF121212) else OffWhite,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(32.dp))
-        Text("Activity Level", color = NeutralDark, style = Typography.titleLarge)
-        Spacer(Modifier.height(16.dp))
-        
-        val levels = listOf("Sedentary", "Light", "Active", "Very Active", "Extra Active")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(levels) { level ->
-                val selected = activityLevel == level
-                Surface(
+        Spacer(Modifier.height(20.dp))
+        Text("Target Session Time Limit", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(30 to "30m", 45 to "45m", 60 to "60m", 90 to "90m").forEach { (mins, label) ->
+                val isSel = viewModel.sessionDurationMinutes == mins
+                Box(
                     modifier = Modifier
-                        .height(80.dp)
-                        .width(100.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { activityLevel = level },
-                    color = if (selected) OrangeTint else CardSurface,
-                    border = BorderStroke(1.dp, if (selected) SunsetOrange else StrokeSoft),
-                    shape = RoundedCornerShape(16.dp)
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSel) LimeGreen else SurfaceDark)
+                        .border(1.dp, if (isSel) LimeGreen else StrokeDark, RoundedCornerShape(10.dp))
+                        .clickable { viewModel.sessionDurationMinutes = mins },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(8.dp)) {
-                        Text(
-                            text = level,
-                            color = if (selected) OrangeDeep else InkBlack,
-                            style = Typography.labelSmall.copy(textAlign = TextAlign.Center)
-                        )
-                    }
+                    Text(
+                        text = label,
+                        color = if (isSel) Color(0xFF121212) else OffWhite,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp
+                    )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+        Text("Available Equipment", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+
+        val allEquipments = listOf(
+            "barbell" to "Barbell",
+            "dumbbell" to "Dumbbells",
+            "cable" to "Cables",
+            "sled machine" to "Leg Machines",
+            "body weight" to "Bodyweight",
+            "resistance band" to "Bands"
+        )
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            allEquipments.forEach { (id, label) ->
+                val isSel = viewModel.availableEquipments.contains(id)
+                FilterChip(
+                    selected = isSel,
+                    onClick = { viewModel.toggleEquipment(id) },
+                    label = { Text(label, fontSize = 12.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = LimeGreen,
+                        selectedLabelColor = Color(0xFF121212),
+                        containerColor = SurfaceDark,
+                        labelColor = OffWhite
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-fun CelebrationScreen(onFinish: () -> Unit) {
-    LaunchedEffect(Unit) {
-        delay(2500)
-        onFinish()
-    }
-    Box(
+fun CelebrationScreen(onExploreClick: () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SunsetOrange),
-        contentAlignment = Alignment.Center
+            .background(PageBg)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "🎉",
-                fontSize = 80.sp
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Your Plan\nIs Ready",
-                style = Typography.displayLarge,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .clip(CircleShape)
+                .background(LimeGreen),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color(0xFF121212), modifier = Modifier.size(44.dp))
         }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = "Your Plan is Ready!",
+            style = Typography.displayLarge,
+            color = OffWhite,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Text(
+            text = "We built your personalized split based on your biometrics, schedule, and ExerciseDB movements.",
+            style = Typography.bodyLarge,
+            color = TextMutedDark,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(40.dp))
+
+        PrimaryButton(
+            text = "Start Training 🚀",
+            onClick = onExploreClick,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

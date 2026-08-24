@@ -2,7 +2,6 @@ package com.example.gymfitness.presentation.screen.leaderboard
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,19 +30,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.example.gymfitness.domain.models.LeaderboardEntry
 import com.example.gymfitness.domain.models.LeaderboardPeriod
 import com.example.gymfitness.domain.models.LeaderboardUiState
-import com.example.gymfitness.presentation.components.BaseCard
-import com.example.gymfitness.presentation.components.GhostButton
+import com.example.gymfitness.presentation.components.CodeChip
 import com.example.gymfitness.presentation.components.PrimaryButton
+import com.example.gymfitness.presentation.componts.BottomNavBar
 import com.example.gymfitness.presentation.viewmodel.LeaderboardViewModel
 import com.example.gymfitness.ui.theme.*
 import kotlinx.coroutines.delay
-
-import androidx.navigation.NavController
-import com.example.gymfitness.presentation.componts.BottomNavBar
-import com.example.gymfitness.presentation.components.CodeChip
 
 @Composable
 fun LeaderboardScreen(
@@ -57,117 +57,124 @@ fun LeaderboardScreen(
     ) { padding ->
         when (uiState) {
             is LeaderboardUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = SunsetOrange)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = LimeGreen)
                 }
             }
             is LeaderboardUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    Text((uiState as LeaderboardUiState.Error).message, color = Color.Red)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (uiState as LeaderboardUiState.Error).message,
+                        color = Color(0xFFFF5252),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             is LeaderboardUiState.Success -> {
                 val state = uiState as LeaderboardUiState.Success
-                val maxPoints = state.entries.maxOfOrNull { it.weeklyPoints } ?: 1
-                
-                if (state.entries.size <= 1) {
-                    LazyColumn(
-                        contentPadding = PaddingValues(bottom = 32.dp),
-                        modifier = Modifier.fillMaxSize().padding(padding).statusBarsPadding()
-                    ) {
-                        item {
-                            LeaderboardHeader(
-                                friendCount = 0,
-                                friendCode = friendCode,
-                                navController = navController
-                            )
-                        }
-                        item {
-                            Spacer(Modifier.height(32.dp))
-                            BaseCard(
-                                modifier = Modifier
-                                    .padding(horizontal = 24.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Text("👋", fontSize = 48.sp)
-                                    Spacer(Modifier.height(16.dp))
-                                    Text(
-                                        text = "Squad is Empty",
-                                        style = Typography.titleLarge,
-                                        color = InkBlack
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        text = "Add friends to see how you rank. Share your squad code or add theirs to start competing!",
-                                        style = Typography.bodyMedium,
-                                        color = TextMuted,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Spacer(Modifier.height(24.dp))
-                                    if (friendCode.isNotEmpty() && friendCode != "------") {
-                                        CodeChip(code = friendCode)
-                                        Spacer(Modifier.height(16.dp))
-                                    }
-                                    PrimaryButton(
-                                        text = "Add Friends",
-                                        onClick = { navController.navigate("friend_code") },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-                        }
-                        item {
-                            Spacer(Modifier.height(32.dp))
-                            YourStatsCard(entry = state.currentUserEntry)
-                        }
+                val maxPoints = state.entries.maxOfOrNull { it.weeklyPoints }?.coerceAtLeast(1) ?: 1
+
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .statusBarsPadding()
+                ) {
+                    // Header with Squad Code & Add button
+                    item {
+                        LeaderboardHeader(
+                            friendCount = state.entries.size,
+                            friendCode = friendCode,
+                            onAddFriend = { navController.navigate("friend_code") }
+                        )
                     }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(bottom = 32.dp),
-                        modifier = Modifier.fillMaxSize().padding(padding).statusBarsPadding()
-                    ) {
+
+                    // Period Selector (Weekly, Monthly, All Time)
+                    item {
+                        PeriodTabRow(
+                            selected = selectedPeriod,
+                            onSelect = { period ->
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.fetchLeaderboard(period)
+                            }
+                        )
+                    }
+
+                    // Top 3 Podium or Empty State
+                    if (state.entries.size <= 1 && state.entries.firstOrNull()?.weeklyPoints == 0) {
                         item {
-                            LeaderboardHeader(
-                                friendCount = state.entries.size,
+                            EmptySquadCard(
                                 friendCode = friendCode,
-                                navController = navController
+                                onAddClick = { navController.navigate("friend_code") }
                             )
                         }
-                        item {
-                            PeriodTabRow(
-                                selected = selectedPeriod,
-                                onSelect = { period ->
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.fetchLeaderboard(period)
-                                }
-                            )
-                        }
+                    } else {
                         item {
                             Top3Podium(
-                                top3 = state.entries.take(3),
-                                haptic = haptic
+                                entries = state.entries,
+                                haptic = haptic,
+                                onInviteClick = { navController.navigate("friend_code") }
                             )
                         }
+                    }
+
+                    // User Stats Card (Weekly Steps, Workouts, Points, Streak)
+                    item {
+                        Spacer(Modifier.height(16.dp))
+                        YourStatsCard(entry = state.currentUserEntry)
+                    }
+
+                    // Full Rankings Section
+                    if (state.entries.isNotEmpty()) {
                         item {
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(20.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Squad Standings",
+                                    fontWeight = FontWeight.Black,
+                                    color = OffWhite,
+                                    fontSize = 18.sp
+                                )
+                                Text(
+                                    text = "${state.entries.size} Competing",
+                                    fontWeight = FontWeight.Bold,
+                                    color = LimeDeepDark,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
                         }
-                        itemsIndexed(state.entries.drop(3)) { index, entry ->
+
+                        itemsIndexed(state.entries) { index, entry ->
                             LeaderboardListItem(
                                 entry = entry,
-                                rank = index + 4,
+                                rank = index + 1,
                                 maxPoints = maxPoints,
                                 onTap = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                             )
                             Spacer(Modifier.height(8.dp))
                         }
-                        item {
-                            Spacer(Modifier.height(16.dp))
-                            YourStatsCard(entry = state.currentUserEntry)
-                        }
+                    }
+
+                    item {
+                        Spacer(Modifier.height(40.dp))
                     }
                 }
             }
@@ -179,26 +186,30 @@ fun LeaderboardScreen(
 fun LeaderboardHeader(
     friendCount: Int,
     friendCode: String,
-    navController: NavController
+    onAddFriend: () -> Unit
 ) {
     Row(
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp).fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
             Text(
                 text = "Leaderboard",
-                style = Typography.displayLarge,
-                color = InkBlack
+                fontWeight = FontWeight.Black,
+                color = OffWhite,
+                fontSize = 26.sp
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = "$friendCount friends competing",
-                style = Typography.bodyMedium,
-                color = TextMuted
+                text = if (friendCount <= 1) "Compete with friends & track rank" else "$friendCount athletes competing",
+                color = TextMutedDark,
+                fontSize = 13.sp
             )
         }
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -206,11 +217,20 @@ fun LeaderboardHeader(
             if (friendCode.isNotEmpty() && friendCode != "------") {
                 CodeChip(code = friendCode)
             }
-            GhostButton(
-                text = "+ Add",
-                onClick = { navController.navigate("friend_code") },
-                modifier = Modifier.height(36.dp)
-            )
+            IconButton(
+                onClick = onAddFriend,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(SurfaceDark)
+                    .border(1.dp, StrokeDark, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GroupAdd,
+                    contentDescription = "Add Friends",
+                    tint = LimeGreen,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -220,29 +240,30 @@ fun PeriodTabRow(selected: LeaderboardPeriod, onSelect: (LeaderboardPeriod) -> U
     val periods = LeaderboardPeriod.values()
     Row(
         modifier = Modifier
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 20.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(50))
-            .background(SurfaceAlt)
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceDark)
+            .border(1.dp, StrokeDark, RoundedCornerShape(12.dp))
             .padding(4.dp)
     ) {
         periods.forEach { period ->
             val isActive = period == selected
             val bgColor by animateColorAsState(
-                targetValue = if (isActive) CardSurface else Color.Transparent,
+                targetValue = if (isActive) LimeGreen else Color.Transparent,
                 label = "tab_bg"
             )
             val textColor by animateColorAsState(
-                targetValue = if (isActive) SunsetOrange else TextMuted,
+                targetValue = if (isActive) Color(0xFF121212) else TextMutedDark,
                 label = "tab_text"
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(50))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(bgColor)
                     .clickable { onSelect(period) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -251,53 +272,90 @@ fun PeriodTabRow(selected: LeaderboardPeriod, onSelect: (LeaderboardPeriod) -> U
                         LeaderboardPeriod.MONTHLY -> "Monthly"
                         LeaderboardPeriod.ALL_TIME -> "All Time"
                     },
-                    style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 13.sp,
                     color = textColor
                 )
             }
         }
     }
-    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
-fun Top3Podium(top3: List<LeaderboardEntry>, haptic: HapticFeedback) {
+fun Top3Podium(
+    entries: List<LeaderboardEntry>,
+    haptic: HapticFeedback,
+    onInviteClick: () -> Unit
+) {
     var triggered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(100)
         triggered = true
     }
 
+    val rank1 = entries.getOrNull(0)
+    val rank2 = entries.getOrNull(1)
+    val rank3 = entries.getOrNull(2)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.Center,
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        val rank2 = top3.getOrNull(1)
-        val rank1 = top3.getOrNull(0)
-        val rank3 = top3.getOrNull(2)
+        // 2nd Place (Left)
+        PodiumSlot(
+            entry = rank2,
+            rank = 2,
+            podiumHeight = 85.dp,
+            accentColor = Color(0xFFC0C0C0),
+            triggered = triggered,
+            delayMs = 150,
+            haptic = haptic,
+            onInviteClick = onInviteClick,
+            modifier = Modifier.weight(1f)
+        )
 
-        PodiumColumn(
-            entry = rank2, rank = 2, targetHeight = 80, delayMs = 150, 
-            triggered = triggered, haptic = haptic, modifier = Modifier.weight(1f)
+        // 1st Place (Center - Highest)
+        PodiumSlot(
+            entry = rank1,
+            rank = 1,
+            podiumHeight = 125.dp,
+            accentColor = LimeGreen,
+            triggered = triggered,
+            delayMs = 300,
+            haptic = haptic,
+            onInviteClick = onInviteClick,
+            modifier = Modifier.weight(1.1f)
         )
-        PodiumColumn(
-            entry = rank1, rank = 1, targetHeight = 120, delayMs = 300, 
-            triggered = triggered, haptic = haptic, modifier = Modifier.weight(1f)
-        )
-        PodiumColumn(
-            entry = rank3, rank = 3, targetHeight = 60, delayMs = 0, 
-            triggered = triggered, haptic = haptic, modifier = Modifier.weight(1f)
+
+        // 3rd Place (Right)
+        PodiumSlot(
+            entry = rank3,
+            rank = 3,
+            podiumHeight = 65.dp,
+            accentColor = Color(0xFFCD7F32),
+            triggered = triggered,
+            delayMs = 0,
+            haptic = haptic,
+            onInviteClick = onInviteClick,
+            modifier = Modifier.weight(1f)
         )
     }
 }
 
 @Composable
-fun PodiumColumn(
-    entry: LeaderboardEntry?, rank: Int, targetHeight: Int, 
-    delayMs: Long, triggered: Boolean, haptic: HapticFeedback, modifier: Modifier
+fun PodiumSlot(
+    entry: LeaderboardEntry?,
+    rank: Int,
+    podiumHeight: androidx.compose.ui.unit.Dp,
+    accentColor: Color,
+    triggered: Boolean,
+    delayMs: Long,
+    haptic: HapticFeedback,
+    onInviteClick: () -> Unit,
+    modifier: Modifier
 ) {
     var animTrigger by remember { mutableStateOf(false) }
     LaunchedEffect(triggered) {
@@ -307,10 +365,11 @@ fun PodiumColumn(
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
-    val barHeight by animateIntAsState(
-        targetValue = if (animTrigger) targetHeight else 0,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 200f),
-        label = "podium_bar_$rank"
+
+    val animatedHeight by animateDpAsState(
+        targetValue = if (animTrigger) podiumHeight else 0.dp,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 220f),
+        label = "podium_anim_$rank"
     )
 
     Column(
@@ -318,156 +377,218 @@ fun PodiumColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom
     ) {
-        if (rank == 1) {
-            Text("👑", fontSize = 24.sp)
-            Spacer(Modifier.height(4.dp))
-        }
-        val avatarSize = if (rank == 1) 64.dp else 48.dp
-        val borderColor = SunsetOrange // Orange borders for top 3 as requested
-        val avatarBg = OrangeTint
+        if (entry != null) {
+            // Crown or Rank Badge for 1st
+            if (rank == 1) {
+                Text("👑", fontSize = 24.sp)
+                Spacer(Modifier.height(2.dp))
+            }
 
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(avatarSize)
-                .clip(CircleShape)
-                .background(avatarBg)
-                .border(2.dp, borderColor, CircleShape)
-        ) {
+            // Avatar Circle
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(if (rank == 1) 56.dp else 46.dp)
+                    .clip(CircleShape)
+                    .background(if (rank == 1) LimeTintDark else SurfaceAltDark)
+                    .border(2.dp, accentColor, CircleShape)
+            ) {
+                Text(
+                    text = entry.avatarInitials,
+                    fontWeight = FontWeight.Black,
+                    fontSize = if (rank == 1) 18.sp else 14.sp,
+                    color = if (rank == 1) LimeGreen else OffWhite
+                )
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            // Display Name
             Text(
-                text = entry?.avatarInitials ?: "?",
-                style = Typography.titleMedium.copy(fontSize = if (rank == 1) 18.sp else 14.sp),
-                color = SunsetOrange
+                text = entry.displayName.split(" ").firstOrNull() ?: "",
+                fontWeight = FontWeight.Bold,
+                color = OffWhite,
+                fontSize = 13.sp,
+                maxLines = 1
             )
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = entry?.displayName?.split(" ")?.firstOrNull() ?: "",
-            style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = InkBlack,
-            maxLines = 1
-        )
-        Text(
-            text = "%,d".format(entry?.weeklyPoints ?: 0),
-            style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = SunsetOrange
-        )
-        Spacer(Modifier.height(8.dp))
 
-        val barColor = Brush.verticalGradient(listOf(SunsetOrange.copy(alpha=0.3f), Color.Transparent))
-        Box(
-            modifier = Modifier
-                .width(56.dp)
-                .height(barHeight.dp)
-                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                .background(barColor)
-                .border(1.dp, borderColor.copy(alpha = 0.5f), RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-        )
+            // Points
+            Text(
+                text = "${entry.weeklyPoints} pts",
+                fontWeight = FontWeight.Black,
+                color = accentColor,
+                fontSize = 12.sp
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            // Solid Podium Block
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(animatedHeight)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                accentColor.copy(alpha = if (rank == 1) 0.35f else 0.2f),
+                                SurfaceDark
+                            )
+                        )
+                    )
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "#$rank",
+                    fontWeight = FontWeight.Black,
+                    fontSize = if (rank == 1) 22.sp else 18.sp,
+                    color = accentColor
+                )
+            }
+        } else {
+            // Empty Slot - Invite Friend Prompt
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceDark)
+                    .border(1.dp, StrokeDark, CircleShape)
+                    .clickable { onInviteClick() }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add", tint = TextMutedDark, modifier = Modifier.size(20.dp))
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Text("Invite", color = TextMutedDark, fontSize = 11.sp)
+            Spacer(Modifier.height(2.dp))
+            Text("-", color = TextMutedDark, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(animatedHeight)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                    .background(SurfaceDark)
+                    .border(1.dp, StrokeDark, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("#$rank", color = StrokeDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+        }
     }
 }
 
 @Composable
-fun LeaderboardListItem(entry: LeaderboardEntry, rank: Int, maxPoints: Int, onTap: () -> Unit) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay((rank * 60).toLong())
-        visible = true
+fun LeaderboardListItem(
+    entry: LeaderboardEntry,
+    rank: Int,
+    maxPoints: Int,
+    onTap: () -> Unit
+) {
+    val rankColor = when (rank) {
+        1 -> LimeGreen
+        2 -> Color(0xFFC0C0C0)
+        3 -> Color(0xFFCD7F32)
+        else -> TextMutedDark
     }
-    val fillFraction by animateFloatAsState(
-        targetValue = if (visible && maxPoints > 0) entry.weeklyPoints.toFloat() / maxPoints else 0f,
-        animationSpec = tween(600, easing = FastOutSlowInEasing),
-        label = "fill"
-    )
 
-    Box(
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (entry.isCurrentUser) LimeTintDark else SurfaceDark
+        ),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier
-            .padding(horizontal = 24.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (entry.isCurrentUser) OrangeTint.copy(alpha = 0.5f) else CardSurface)
+            .padding(horizontal = 20.dp)
             .border(
-                width = 1.dp,
-                color = if (entry.isCurrentUser) SunsetOrange.copy(alpha = 0.5f) else StrokeSoft,
-                shape = RoundedCornerShape(12.dp)
+                width = if (entry.isCurrentUser) 1.5.dp else 1.dp,
+                color = if (entry.isCurrentUser) LimeGreen else StrokeDark,
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable { onTap() }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fillFraction)
-                .background(SunsetOrange.copy(alpha = 0.05f))
-        )
-        if (entry.isCurrentUser) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(SunsetOrange)
-            )
-        }
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Rank Number
             Text(
                 text = "$rank",
-                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = TextMuted,
-                modifier = Modifier.width(24.dp),
+                fontWeight = FontWeight.Black,
+                color = rankColor,
+                fontSize = 15.sp,
+                modifier = Modifier.width(28.dp),
                 textAlign = TextAlign.Center
             )
+
             Spacer(Modifier.width(8.dp))
+
+            // Avatar
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(SurfaceAlt)
+                    .background(SurfaceAltDark)
+                    .border(1.dp, if (entry.isCurrentUser) LimeGreen else StrokeDark, CircleShape)
             ) {
                 Text(
                     text = entry.avatarInitials,
-                    style = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = InkBlack
+                    fontWeight = FontWeight.Bold,
+                    color = if (entry.isCurrentUser) LimeGreen else OffWhite,
+                    fontSize = 14.sp
                 )
             }
+
             Spacer(Modifier.width(12.dp))
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+
+            // Name + Stats breakdown
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = entry.displayName,
-                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                        color = InkBlack
+                        fontWeight = FontWeight.Bold,
+                        color = OffWhite,
+                        fontSize = 14.sp
                     )
                     if (entry.isCurrentUser) {
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(SunsetOrange)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .background(LimeGreen)
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
-                            Text("YOU", style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold), color = Color.White)
+                            Text("YOU", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color(0xFF121212))
                         }
                     }
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "%,d steps · %d workout%s".format(entry.steps, entry.workoutsThisWeek, if (entry.workoutsThisWeek == 1) "" else "s"),
-                    style = Typography.labelSmall,
-                    color = TextMuted
+                    text = "${String.format("%,d", entry.steps)} steps • ${entry.workoutsThisWeek} workouts",
+                    color = TextMutedDark,
+                    fontSize = 11.sp
                 )
             }
-            Text(
-                text = "%,d".format(entry.weeklyPoints),
-                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = InkBlack
-            )
+
+            // Total Points
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = String.format("%,d", entry.weeklyPoints),
+                    fontWeight = FontWeight.Black,
+                    color = if (entry.isCurrentUser) LimeGreen else OffWhite,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = "pts",
+                    color = TextMutedDark,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -475,41 +596,141 @@ fun LeaderboardListItem(entry: LeaderboardEntry, rank: Int, maxPoints: Int, onTa
 @Composable
 fun YourStatsCard(entry: LeaderboardEntry?) {
     if (entry == null) return
-    BaseCard(
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
-            .padding(horizontal = 24.dp)
             .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .border(1.dp, StrokeDark, RoundedCornerShape(16.dp))
     ) {
-        Column {
-            Text(
-                "YOUR STATS THIS WEEK",
-                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                color = SunsetOrange
-            )
-            Spacer(Modifier.height(16.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "YOUR STATS THIS WEEK",
+                    fontWeight = FontWeight.Black,
+                    color = LimeGreen,
+                    fontSize = 11.sp,
+                    letterSpacing = 1.sp
+                )
+
+                if (entry.currentStreak > 0) {
+                    Surface(
+                        color = LimeTintDark,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "🔥 ${entry.currentStreak}d Streak",
+                            color = LimeGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem(value = "%,d".format(entry.steps), label = "Steps", color = InkBlack)
-                StatItem(value = "${entry.workoutsThisWeek}", label = "Workouts", color = InkBlack)
-                StatItem(value = "%,d".format(entry.weeklyPoints), label = "Points", color = SunsetOrange)
-                StatItem(value = "${entry.currentStreak} \uD83D\uDD25", label = "Streak", color = InkBlack)
+                StatTile(label = "Steps", value = String.format("%,d", entry.steps), modifier = Modifier.weight(1f))
+                StatTile(label = "Workouts", value = "${entry.workoutsThisWeek}", modifier = Modifier.weight(1f))
+                StatTile(label = "Points", value = String.format("%,d", entry.weeklyPoints), highlight = true, modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-fun StatItem(value: String, label: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        AnimatedContent(
-            targetState = value,
-            transitionSpec = { slideInVertically { it } + fadeIn() togetherWith slideOutVertically { -it } + fadeOut() },
-            label = "stat_$label"
-        ) { v ->
-            Text(v, style = Typography.displayMedium, color = color)
+fun StatTile(label: String, value: String, highlight: Boolean = false, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            fontWeight = FontWeight.Black,
+            fontSize = 20.sp,
+            color = if (highlight) LimeGreen else OffWhite
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextMutedDark
+        )
+    }
+}
+
+@Composable
+fun EmptySquadCard(friendCode: String, onAddClick: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .border(1.dp, StrokeDark, RoundedCornerShape(16.dp))
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .background(LimeTintDark),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = LimeGreen,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Text(
+                text = "Squad Standings",
+                fontWeight = FontWeight.Black,
+                color = OffWhite,
+                fontSize = 18.sp
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                text = "Add friends to compete on weekly steps and workouts! Share your squad code or enter theirs.",
+                color = TextMutedDark,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+
+            Spacer(Modifier.height(18.dp))
+
+            if (friendCode.isNotEmpty() && friendCode != "------") {
+                CodeChip(code = friendCode)
+                Spacer(Modifier.height(14.dp))
+            }
+
+            PrimaryButton(
+                text = "Add / Join Friends ➔",
+                onClick = onAddClick,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        Text(label, style = Typography.labelSmall, color = TextMuted)
     }
 }

@@ -8,13 +8,11 @@ import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.gymfitness.data.sync.LeaderboardSyncWorker
-import com.example.gymfitness.domain.models.MuscleGroup
-import com.example.gymfitness.domain.models.SplitPlan
-import com.example.gymfitness.domain.models.SplitType
-import com.example.gymfitness.domain.models.Workout
+import com.example.gymfitness.domain.models.*
 import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.usecase.SplitRecommenderUseCase
+import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
@@ -26,17 +24,27 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
+
+data class WeekdayTabItem(
+    val dayIndex: Int, // 0 = Mon, ..., 6 = Sun
+    val shortName: String, // "Mon", "Tue"...
+    val fullName: String, // "Monday", "Tuesday"...
+    val dayNumberInMonth: Int,
+    val isToday: Boolean
+)
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val userRepository: UserRepository,
     private val splitRecommender: SplitRecommenderUseCase,
+    private val generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    private val deviceId: String by lazy {
+    val deviceId: String by lazy {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "default_device"
     }
 
@@ -64,21 +72,88 @@ class WorkoutViewModel @Inject constructor(
     private val _recommendedSplit = MutableStateFlow<SplitPlan?>(null)
     val recommendedSplit: StateFlow<SplitPlan?> = _recommendedSplit.asStateFlow()
 
+    // --- AI Workout Plan State ---
+    private val _generatedPlan = MutableStateFlow<GeneratedWorkoutPlan?>(null)
+    val generatedPlan: StateFlow<GeneratedWorkoutPlan?> = _generatedPlan.asStateFlow()
+
+    private val _isGeneratingPlan = MutableStateFlow(false)
+    val isGeneratingPlan: StateFlow<Boolean> = _isGeneratingPlan.asStateFlow()
+
+    private val _isAdoptingPlan = MutableStateFlow(false)
+    val isAdoptingPlan: StateFlow<Boolean> = _isAdoptingPlan.asStateFlow()
+
+    private val _planError = MutableStateFlow<String?>(null)
+    val planError: StateFlow<String?> = _planError.asStateFlow()
+
+    // --- Ascending Weekday Schedule State ---
+    private val todayIndex: Int = (LocalDate.now().dayOfWeek.value - 1).coerceIn(0, 6)
+    private val _selectedWeekday = MutableStateFlow(todayIndex)
+    val selectedWeekday: StateFlow<Int> = _selectedWeekday.asStateFlow()
+
+    private val _weekdays = MutableStateFlow<List<WeekdayTabItem>>(emptyList())
+    val weekdays: StateFlow<List<WeekdayTabItem>> = _weekdays.asStateFlow()
+
     init {
+        initializeWeekdays()
         fetchWorkouts(deviceId)
-        loadRecommendation()
+        loadUserPlanAndRecommendation()
     }
 
-    private fun loadRecommendation() {
+    private fun initializeWeekdays() {
+        val today = LocalDate.now()
+        val currentDayOfWeek = today.dayOfWeek.value // 1 (Mon) to 7 (Sun)
+        val monday = today.minusDays((currentDayOfWeek - 1).toLong())
+
+        val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        val fullNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+        val list = (0..6).map { idx ->
+            val date = monday.plusDays(idx.toLong())
+            WeekdayTabItem(
+                dayIndex = idx,
+                shortName = dayNames[idx],
+                fullName = fullNames[idx],
+                dayNumberInMonth = date.dayOfMonth,
+                isToday = idx == (currentDayOfWeek - 1)
+            )
+        }
+        _weekdays.value = list
+    }
+
+    fun selectWeekday(index: Int) {
+        _selectedWeekday.value = index.coerceIn(0, 6)
+    }
+
+    private fun loadUserPlanAndRecommendation() {
         viewModelScope.launch {
             userRepository.getProfileFlow(deviceId).collect { profile ->
-                val userLoggedCount = _workouts.value.size
-                val recommendation = splitRecommender.computeRecommendation(
-                    experienceLevel = profile?.experienceLevel ?: "BEGINNER",
-                    daysPerWeek = profile?.daysPerWeekAvailable ?: 4,
-                    userLoggedWorkoutCount = userLoggedCount
-                )
-                _recommendedSplit.value = recommendation
+                if (profile != null) {
+                    val userLoggedCount = _workouts.value.size
+                    val recommendation = splitRecommender.computeRecommendation(
+                        experienceLevel = profile.experienceLevel ?: "BEGINNER",
+                        daysPerWeek = profile.daysPerWeekAvailable ?: 5,
+                        userLoggedWorkoutCount = userLoggedCount
+                    )
+                    _recommendedSplit.value = recommendation
+
+                    // Auto-load plan if not yet loaded
+                    if (_generatedPlan.value == null) {
+                        val isBulking = profile.fitnessGoal.contains("muscle", ignoreCase = true) || profile.fitnessGoal.contains("bulk", ignoreCase = true)
+                        val planGoal = if (isBulking) "bulk_up" else if (profile.fitnessGoal.contains("loss", ignoreCase = true)) "cut_down" else profile.fitnessGoal
+                        
+                        generateAIPlan(
+                            weightKg = profile.weight.toFloat(),
+                            heightCm = profile.height.toFloat(),
+                            age = profile.age,
+                            gender = profile.gender,
+                            goal = planGoal,
+                            daysPerWeek = profile.daysPerWeekAvailable ?: 5,
+                            sessionDurationMinutes = 60,
+                            experienceLevel = profile.experienceLevel ?: "beginner",
+                            equipment = listOf("barbell", "dumbbell", "cable", "sled machine", "body weight")
+                        )
+                    }
+                }
             }
         }
     }
@@ -163,5 +238,67 @@ class WorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             repository.addSet(exerciseId, reps, weight)
         }
+    }
+
+    // --- AI Plan Generator Functions ---
+    fun generateAIPlan(
+        weightKg: Float,
+        heightCm: Float,
+        age: Int,
+        gender: String,
+        goal: String,
+        daysPerWeek: Int,
+        sessionDurationMinutes: Int,
+        experienceLevel: String,
+        equipment: List<String>,
+        focusMuscles: List<String> = emptyList()
+    ) {
+        viewModelScope.launch {
+            _isGeneratingPlan.value = true
+            _planError.value = null
+            
+            val prefs = PlanGenerationPreferences(
+                deviceId = deviceId,
+                weightKg = weightKg,
+                heightCm = heightCm,
+                age = age,
+                gender = gender,
+                fitnessGoal = goal,
+                daysPerWeek = daysPerWeek,
+                sessionDurationMinutes = sessionDurationMinutes,
+                experienceLevel = experienceLevel,
+                availableEquipment = equipment,
+                focusMuscles = focusMuscles
+            )
+
+            val result = generateWorkoutPlanUseCase(prefs)
+            result.onSuccess { plan ->
+                _generatedPlan.value = plan
+                _isGeneratingPlan.value = false
+            }.onFailure { error ->
+                _planError.value = error.localizedMessage ?: "Failed to generate workout plan"
+                _isGeneratingPlan.value = false
+            }
+        }
+    }
+
+    fun adoptGeneratedPlan(onSuccess: () -> Unit) {
+        val plan = _generatedPlan.value ?: return
+        viewModelScope.launch {
+            _isAdoptingPlan.value = true
+            val result = repository.adoptPlan(deviceId, plan)
+            _isAdoptingPlan.value = false
+            if (result.isSuccess) {
+                fetchWorkouts(deviceId)
+                onSuccess()
+            } else {
+                _planError.value = "Failed to adopt plan: ${result.exceptionOrNull()?.localizedMessage}"
+            }
+        }
+    }
+
+    fun clearGeneratedPlan() {
+        _generatedPlan.value = null
+        _planError.value = null
     }
 }

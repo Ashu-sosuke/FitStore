@@ -83,6 +83,10 @@ fun Navigation() {
                 WorkoutScreen(navController)
             }
 
+            composable(route = Screen.PlanGenerator.route) {
+                com.example.gymfitness.presentation.screen.workouts.PlanGeneratorScreen(navController)
+            }
+
             composable(route = Screen.CreatePlan.route) {
                 CreatePlanScreen(navController)
             }

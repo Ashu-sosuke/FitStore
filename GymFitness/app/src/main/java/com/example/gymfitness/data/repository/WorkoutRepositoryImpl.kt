@@ -7,6 +7,11 @@ import com.example.gymfitness.data.local.entity.WorkoutEntity
 import com.example.gymfitness.data.mapper.toDomain
 import com.example.gymfitness.data.mapper.toDto
 import com.example.gymfitness.data.remote.api.WorkoutApiService
+import com.example.gymfitness.data.remote.dto.AdoptWorkoutPlanRequestDto
+import com.example.gymfitness.data.remote.dto.toDomain
+import com.example.gymfitness.data.remote.dto.toDto
+import com.example.gymfitness.domain.models.GeneratedWorkoutPlan
+import com.example.gymfitness.domain.models.PlanGenerationPreferences
 import com.example.gymfitness.domain.models.Workout
 import com.example.gymfitness.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +24,7 @@ class WorkoutRepositoryImpl @Inject constructor(
 ) : WorkoutRepository {
 
     override suspend fun saveWorkout(workout: Workout): Result<Workout> {
-        // Complex local save
+        // Local save
         val workoutId = workoutDao.insertWorkout(
             WorkoutEntity(name = workout.name)
         )
@@ -56,21 +61,72 @@ class WorkoutRepositoryImpl @Inject constructor(
         return try {
             val remoteWorkouts = workoutApi.listWorkouts(deviceId)
             val domainWorkouts = remoteWorkouts.map { it.toDomain() }
-            
-            // Syncing remote to local is complex for workouts due to relations.
-            // Typically you'd clear local and rebuild or match by some external ID.
-            
             Result.success(domainWorkouts)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    override suspend fun generatePlan(preferences: PlanGenerationPreferences): Result<GeneratedWorkoutPlan> {
+        return try {
+            val planDto = workoutApi.generateWorkoutPlan(preferences.toDto())
+            Result.success(planDto.toDomain())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun adoptPlan(deviceId: String, plan: GeneratedWorkoutPlan): Result<Boolean> {
+        return try {
+            // 1. Save all non-rest daily routines to local Room database
+            for (routine in plan.dailyRoutines) {
+                if (routine.isRestDay || routine.exercises.isEmpty()) continue
+
+                val workoutId = workoutDao.insertWorkout(
+                    WorkoutEntity(name = routine.dayName)
+                )
+
+                for (ex in routine.exercises) {
+                    val exerciseId = workoutDao.insertExercise(
+                        ExerciseEntity(workoutId = workoutId, name = ex.name)
+                    )
+                    
+                    val repsInt = ex.targetReps.substringBefore("-").filter { it.isDigit() }.toIntOrNull() ?: 10
+                    for (s in 1..ex.targetSets) {
+                        workoutDao.insertSet(
+                            SetEntity(
+                                exerciseId = exerciseId,
+                                reps = repsInt,
+                                weightKg = ex.suggestedWeightKg ?: 0f
+                            )
+                        )
+                    }
+                }
+            }
+
+            // 2. Sync adoption to backend
+            try {
+                workoutApi.adoptWorkoutPlan(
+                    AdoptWorkoutPlanRequestDto(
+                        deviceId = deviceId,
+                        plan = plan.toDto()
+                    )
+                )
+            } catch (_: Exception) {
+                // Keep going if offline, local DB is already populated
+            }
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun addExercise(workoutId: Long, name: String): Long {
-        return workoutDao.insertExercise(com.example.gymfitness.data.local.entity.ExerciseEntity(workoutId = workoutId, name = name))
+        return workoutDao.insertExercise(ExerciseEntity(workoutId = workoutId, name = name))
     }
 
     override suspend fun addSet(exerciseId: Long, reps: Int, weightKg: Float) {
-        workoutDao.insertSet(com.example.gymfitness.data.local.entity.SetEntity(exerciseId = exerciseId, reps = reps, weightKg = weightKg))
+        workoutDao.insertSet(SetEntity(exerciseId = exerciseId, reps = reps, weightKg = weightKg))
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -215,7 +216,7 @@ fun HomeScreenContent(
 
             Spacer(Modifier.height(24.dp))
 
-            // Recent Reports section (Weekly Steps Chart)
+            // Step Activity & Progress Hub Box
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -224,12 +225,12 @@ fun HomeScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Recent Reports",
+                    text = "Daily Step Activity",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = OffWhite
                 )
                 Text(
-                    text = "View Analytics",
+                    text = "View Analytics ➔",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = LimeGreen,
                     modifier = Modifier.clickable { navController.navigate(Screen.Analytics.route) }
@@ -242,23 +243,101 @@ fun HomeScreenContent(
                     .padding(horizontal = 24.dp)
                     .clickable { navController.navigate(Screen.Analytics.route) }
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("STEPS WEEKLY", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
-                        Text("Active Progress", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Top Row: Steps count + Percentage Badge
+                    val stepsTarget = if (state.stepsTarget > 0) state.stepsTarget else 10000
+                    val stepPct = ((state.stepsWalked.toFloat() / stepsTarget.toFloat()) * 100).toInt().coerceIn(0, 999)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("STEPS TODAY", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = String.format(Locale.getDefault(), "%,d", state.stepsWalked),
+                                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 28.sp, fontWeight = FontWeight.Black),
+                                    color = OffWhite
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "/ ${String.format(Locale.getDefault(), "%,d", stepsTarget)}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = TextMutedDark,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            color = if (stepPct >= 100) LimeGreen else LimeTintDark,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "$stepPct% Done",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                                color = if (stepPct >= 100) Color(0xFF121212) else LimeGreen,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
                     }
+
+                    // Progress Bar
+                    val progressAnim by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = (state.stepsWalked.toFloat() / stepsTarget.toFloat()).coerceIn(0f, 1f),
+                        label = "stepProgress"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(SurfaceAltDark)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progressAnim)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(LimeGreen)
+                        )
+                    }
+
+                    // 3 Metric Pills: Distance, Burned, Active Time
+                    val distanceKm = String.format(Locale.getDefault(), "%.2f", state.stepsWalked * 0.00075f)
+                    val burnedKcal = (state.stepsWalked * 0.04f).toInt()
+                    val activeMins = state.stepsWalked / 100
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("DISTANCE", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = TextMutedDark)
+                            Text("$distanceKm km", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                        }
+                        Column {
+                            Text("BURNED", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = TextMutedDark)
+                            Text("$burnedKcal kcal", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = LimeGreen)
+                        }
+                        Column {
+                            Text("ACTIVE TIME", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp), color = TextMutedDark)
+                            Text("${activeMins}m", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                        }
+                    }
+
+                    Divider(color = StrokeDark)
+
+                    // Weekly Steps Chart
+                    StepsBarChart(
+                        weeklySteps = state.weeklySteps,
+                        isHealthConnectGranted = state.isHealthConnectGranted,
+                        isLoading = state.isLoading,
+                        onConnectClick = onConnectHealth
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
-                StepsBarChart(
-                    weeklySteps = state.weeklySteps,
-                    isHealthConnectGranted = state.isHealthConnectGranted,
-                    isLoading = state.isLoading,
-                    onConnectClick = onConnectHealth
-                )
             }
 
             Spacer(Modifier.height(24.dp))

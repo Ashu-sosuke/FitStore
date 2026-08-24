@@ -11,7 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -81,13 +83,51 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Text(
-                text = viewModel.name.ifBlank { "My Profile" },
-                style = Typography.displayLarge,
-                color = InkBlack
-            )
+            Spacer(Modifier.height(24.dp))
 
-            Spacer(Modifier.height(32.dp))
+            // AI Workout Routine & Goals Card
+            BaseCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate(Screen.PlanGenerator.route) }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                tint = LimeGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "AI Workout Routine & Schedule",
+                                fontWeight = FontWeight.Bold,
+                                color = OffWhite,
+                                fontSize = 15.sp
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Modify your split, frequency (days/wk), time limit & equipment",
+                            color = TextMutedDark,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = LimeGreen
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
 
             // Editable Profile Fields Card
             BaseCard(modifier = Modifier.fillMaxWidth()) {
