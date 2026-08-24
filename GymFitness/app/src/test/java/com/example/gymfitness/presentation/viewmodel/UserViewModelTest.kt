@@ -7,6 +7,8 @@ import app.cash.turbine.test
 import com.example.gymfitness.data.local.database.AppDatabase
 import com.example.gymfitness.domain.models.UserProfile
 import com.example.gymfitness.domain.repository.UserRepository
+import com.example.gymfitness.domain.repository.WorkoutRepository
+import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.utils.MainDispatcherRule
 import io.mockk.coEvery
@@ -34,6 +36,8 @@ class UserViewModelTest {
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private lateinit var repository: UserRepository
+    private lateinit var workoutRepository: WorkoutRepository
+    private lateinit var generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase
     private lateinit var db: AppDatabase
     private lateinit var context: Context
     private lateinit var viewModel: UserViewModel
@@ -60,6 +64,8 @@ class UserViewModelTest {
         every { Settings.Secure.getString(any(), any()) } returns deviceId
 
         repository = mockk(relaxed = true)
+        workoutRepository = mockk(relaxed = true)
+        generateWorkoutPlanUseCase = mockk(relaxed = true)
         db = mockk(relaxed = true)
         context = mockk(relaxed = true)
 
@@ -67,6 +73,8 @@ class UserViewModelTest {
 
         viewModel = UserViewModel(
             repository = repository,
+            workoutRepository = workoutRepository,
+            generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
             db = db,
             context = context
         )
@@ -88,7 +96,13 @@ class UserViewModelTest {
     @Test
     fun `init determines startDestination is GetStart when profile is null`() = runTest {
         every { repository.getProfileFlow(any()) } returns flowOf(null)
-        val emptyVm = UserViewModel(repository, db, context)
+        val emptyVm = UserViewModel(
+            repository = repository,
+            workoutRepository = workoutRepository,
+            generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
+            db = db,
+            context = context
+        )
         emptyVm.startDestination.test {
             assertEquals(Screen.GetStart.route, awaitItem())
             cancelAndIgnoreRemainingEvents()
@@ -105,7 +119,13 @@ class UserViewModelTest {
         viewModel.nextStep()
         assertEquals(2, viewModel.currentStep)
 
-        viewModel.nextStep() // bound check (max 2)
+        viewModel.nextStep()
+        assertEquals(3, viewModel.currentStep)
+
+        viewModel.nextStep() // bound check (max 3)
+        assertEquals(3, viewModel.currentStep)
+
+        viewModel.previousStep()
         assertEquals(2, viewModel.currentStep)
 
         viewModel.previousStep()
@@ -143,6 +163,7 @@ class UserViewModelTest {
 
         var callbackCalled = false
         coEvery { repository.saveProfile(any()) } returns Unit
+        coEvery { generateWorkoutPlanUseCase(any()) } returns Result.success(mockk(relaxed = true))
 
         viewModel.saveUser {
             callbackCalled = true
