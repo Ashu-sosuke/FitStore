@@ -41,11 +41,10 @@ fun WorkoutDetailScreen(
     viewModel: com.example.gymfitness.presentation.viewmodel.WorkoutViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val context = LocalContext.current
-    val deviceId = remember { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) }
     
     LaunchedEffect(workoutId) {
         workoutId?.toLongOrNull()?.let { id ->
-            viewModel.fetchWorkoutDetails(deviceId, id)
+            viewModel.fetchWorkoutDetails(viewModel.deviceId, id)
         }
     }
 

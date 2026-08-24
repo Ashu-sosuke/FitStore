@@ -1,9 +1,7 @@
 package com.example.gymfitness.presentation.viewmodel
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.provider.Settings
 import android.util.Log
+import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.CustomCredential
@@ -16,6 +14,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.example.gymfitness.data.remote.api.LeaderboardApiService
 import com.example.gymfitness.data.remote.api.UserProfileRegistration
 import com.example.gymfitness.domain.repository.UserRepository
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +41,7 @@ sealed class AuthUiState {
 class AuthViewModel @Inject constructor(
     private val leaderboardApi: LeaderboardApiService,
     private val userRepository: UserRepository,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -50,20 +50,15 @@ class AuthViewModel @Inject constructor(
 
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    @SuppressLint("HardwareIds")
-    private val deviceId: String = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ANDROID_ID
-    )
-
     /**
      * Full Google Sign-In flow:
      * 1. Credential Manager shows the Google account picker (bottom sheet / popup)
      * 2. User selects their Google account
      * 3. We receive the Google ID Token
      * 4. Firebase Auth verifies the token and signs the user in
-     * 5. We check if they already have a profile in Room DB
-     * 6. Route to Home (existing user) or Onboarding (new user)
+     * 5. We persist the Firebase UID as the active user ID
+     * 6. We check if they already have a profile in local Room DB OR remote backend
+     * 7. Route to Home (existing user) or Onboarding (new user)
      */
     fun signInWithGoogle(activityContext: Context) {
         viewModelScope.launch {
@@ -114,20 +109,36 @@ class AuthViewModel @Inject constructor(
                     return@launch
                 }
 
-                Log.d("AUTH", "Firebase Auth successful: uid=${firebaseUser.uid}, email=${firebaseUser.email}")
+                // Step 4: Use Firebase UID as the unique user identifier (per-account, not per-device)
+                val userId = firebaseUser.uid
+                tokenManager.saveUserId(userId)
 
-                // Step 4: Check if this device already has a profile in Room DB
-                val existingProfile = userRepository.getProfile(deviceId)
+                Log.d("AUTH", "Firebase Auth successful: uid=$userId, email=${firebaseUser.email}")
+
+                // Step 5: Check if this user already has a profile
+                // First check local Room DB
+                var existingProfile = userRepository.getProfile(userId)
+
+                // If not in local DB, try fetching from remote backend
+                if (existingProfile == null) {
+                    try {
+                        val syncResult = userRepository.syncProfile(userId)
+                        existingProfile = syncResult.getOrNull()
+                    } catch (e: Exception) {
+                        Log.w("AUTH", "Remote profile fetch failed: ${e.localizedMessage}")
+                    }
+                }
+
                 val isNewUser = existingProfile == null
 
                 val friendCode = existingProfile?.friendCode
-                    ?: (deviceId.take(2).uppercase() + (1000..9999).random())
+                    ?: (userId.take(2).uppercase() + (1000..9999).random())
 
-                // Step 5: Register on leaderboard API for new users
+                // Step 6: Register on leaderboard API for new users
                 if (isNewUser) {
                     try {
                         leaderboardApi.registerUser(UserProfileRegistration(
-                            userId = deviceId,
+                            userId = userId,
                             friendCode = friendCode,
                             displayName = displayName.ifEmpty { firebaseUser.displayName ?: "User" },
                             avatarInitials = (displayName.ifEmpty { firebaseUser.displayName ?: "U" })
@@ -138,9 +149,9 @@ class AuthViewModel @Inject constructor(
                     }
                 }
 
-                // Step 6: Emit success — UI will route based on isNewUser
+                // Step 7: Emit success — UI will route based on isNewUser
                 _uiState.value = AuthUiState.Success(
-                    userId = deviceId,
+                    userId = userId,
                     friendCode = friendCode,
                     isNewUser = isNewUser,
                     displayName = displayName.ifEmpty { firebaseUser.displayName ?: "" },

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.models.LeaderboardPeriod
+import com.example.gymfitness.utils.TokenManager
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
@@ -22,8 +23,11 @@ import javax.inject.Inject
 @HiltViewModel
 class FriendCodeViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val leaderboardRepository: LeaderboardRepository
+    private val leaderboardRepository: LeaderboardRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
+
+    val deviceId: String get() = tokenManager.getUserId()
 
     private val _uiState = MutableStateFlow<FriendCodeUiState>(FriendCodeUiState.Loading)
     val uiState: StateFlow<FriendCodeUiState> = _uiState.asStateFlow()
@@ -41,11 +45,11 @@ class FriendCodeViewModel @Inject constructor(
         data class Error(val message: String)       : AddFriendResult()
     }
 
-    fun loadData(currentUserId: String) {
+    fun loadData(currentUserId: String = deviceId) {
         viewModelScope.launch {
             // We combine user profile to get own code, and leaderboard to get friends list
             combine(
-                userRepository.getProfileFlow(""),
+                userRepository.getProfileFlow(deviceId),
                 leaderboardRepository.observeLeaderboard(LeaderboardPeriod.WEEKLY)
             ) { profile, leaderboardEntries ->
                 val myCode = profile?.friendCode ?: ""

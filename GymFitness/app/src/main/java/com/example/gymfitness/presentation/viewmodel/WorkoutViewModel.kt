@@ -13,6 +13,7 @@ import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.usecase.SplitRecommenderUseCase
 import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
@@ -41,12 +42,11 @@ class WorkoutViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val splitRecommender: SplitRecommenderUseCase,
     private val generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    val deviceId: String by lazy {
-        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "default_device"
-    }
+    val deviceId: String get() = tokenManager.getUserId()
 
     private val _workouts = MutableStateFlow<List<Workout>>(emptyList())
     val workouts: StateFlow<List<Workout>> = _workouts.asStateFlow()

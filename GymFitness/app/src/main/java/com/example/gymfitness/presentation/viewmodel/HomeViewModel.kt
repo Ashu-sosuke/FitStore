@@ -11,6 +11,7 @@ import com.example.gymfitness.domain.repository.WeightRepository
 import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.presentation.state.HomeState
 import com.example.gymfitness.utils.HealthConnectManager
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -32,15 +33,14 @@ class HomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val leaderboardRepository: LeaderboardRepository,
     private val healthConnectManager: HealthConnectManager,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
-    private val deviceId: String by lazy {
-        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-    }
+    val deviceId: String get() = tokenManager.getUserId()
 
     private fun friendCodeFromUserId(userId: String): String {
         if (userId.length < 6) return userId + "123"

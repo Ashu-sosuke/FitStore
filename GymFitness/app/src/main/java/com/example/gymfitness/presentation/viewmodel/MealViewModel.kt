@@ -8,6 +8,7 @@ import com.example.gymfitness.data.local.dao.MealDao
 import com.example.gymfitness.data.local.entity.MealEntity
 import com.example.gymfitness.data.remote.api.FoodApiService
 import com.example.gymfitness.data.remote.api.toMultipartBody
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,6 +24,7 @@ class MealViewModel @Inject constructor(
     private val dao: MealDao,
     private val mealApi: com.example.gymfitness.data.remote.api.MealApiService,
     private val mealRepository: com.example.gymfitness.domain.repository.MealRepository,
+    private val tokenManager: TokenManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
@@ -58,7 +60,7 @@ class MealViewModel @Inject constructor(
     }
 
     fun logFoodAsMeal(nutrient: com.example.gymfitness.data.remote.dto.NutrientDto, mealType: String) {
-        val deviceId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+        val deviceId = tokenManager.getUserId()
         val meal = com.example.gymfitness.domain.models.Meal(
             id = null,
             deviceId = deviceId,
@@ -164,7 +166,7 @@ class MealViewModel @Inject constructor(
     }
 
     fun saveMealToRoom(meal: MealEntity) {
-        val deviceId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+        val deviceId = tokenManager.getUserId()
         val domainMeal = com.example.gymfitness.domain.models.Meal(
             id = null,
             deviceId = deviceId,

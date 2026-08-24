@@ -1,8 +1,6 @@
 package com.example.gymfitness.presentation.viewmodel
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +12,7 @@ import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import com.example.gymfitness.presentation.navigation.Screen
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +26,7 @@ class UserViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase,
     private val db: com.example.gymfitness.data.local.database.AppDatabase,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -59,11 +59,7 @@ class UserViewModel @Inject constructor(
     var isSavingUser by mutableStateOf(false)
         private set
 
-    @SuppressLint("HardwareIds")
-    val deviceId: String = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ANDROID_ID
-    ) ?: "default_device"
+    val deviceId: String get() = tokenManager.getUserId()
 
     init {
         checkUserRegistration()
@@ -71,8 +67,30 @@ class UserViewModel @Inject constructor(
 
     private fun checkUserRegistration() {
         viewModelScope.launch {
+            // First check local Room DB
+            val localProfile = repository.getProfile(deviceId)
+            if (localProfile != null) {
+                _startDestination.value = Screen.Home.route
+                return@launch
+            }
+
+            // If not in local DB, try fetching from remote backend (returning user on new install)
+            try {
+                val syncResult = repository.syncProfile(deviceId)
+                if (syncResult.isSuccess) {
+                    _startDestination.value = Screen.Home.route
+                    return@launch
+                }
+            } catch (_: Exception) { /* Remote not available */ }
+
+            // No profile found anywhere — show GetStart screen
+            _startDestination.value = Screen.GetStart.route
+
+            // Keep observing for profile creation (e.g. after onboarding completes)
             repository.getProfileFlow(deviceId).collect { user ->
-                _startDestination.value = if (user != null) Screen.Home.route else Screen.GetStart.route
+                if (user != null) {
+                    _startDestination.value = Screen.Home.route
+                }
             }
         }
     }
@@ -251,6 +269,8 @@ class UserViewModel @Inject constructor(
             } catch (e: Exception) {
                 // fallback
             }
+            tokenManager.clearUserId()
+            tokenManager.clearToken()
             _startDestination.value = Screen.GetStart.route
             onComplete()
         }

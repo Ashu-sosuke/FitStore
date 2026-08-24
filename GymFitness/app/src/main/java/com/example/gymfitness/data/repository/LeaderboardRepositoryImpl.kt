@@ -13,6 +13,7 @@ import com.example.gymfitness.domain.models.LeaderboardEntry
 import com.example.gymfitness.domain.models.LeaderboardPeriod
 import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.utils.HealthConnectManager
+import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,12 +24,11 @@ class LeaderboardRepositoryImpl @Inject constructor(
     private val workoutDao: WorkoutDao,
     private val healthConnectManager: HealthConnectManager,
     private val apiService: LeaderboardApiService,
+    private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
 ) : LeaderboardRepository {
 
-    private val deviceId: String by lazy {
-        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-    }
+    val deviceId: String get() = tokenManager.getUserId()
 
     override fun observeLeaderboard(period: LeaderboardPeriod): Flow<List<LeaderboardEntry>> {
         return leaderboardDao.observeLeaderboard(period.name).map { entities ->

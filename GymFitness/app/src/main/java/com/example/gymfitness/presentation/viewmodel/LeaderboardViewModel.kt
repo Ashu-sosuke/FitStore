@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.domain.repository.UserRepository
+import com.example.gymfitness.utils.TokenManager
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -24,8 +25,11 @@ import javax.inject.Inject
 @HiltViewModel
 class LeaderboardViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val leaderboardRepository: LeaderboardRepository
+    private val leaderboardRepository: LeaderboardRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
+
+    val deviceId: String get() = tokenManager.getUserId()
 
     private val _uiState = MutableStateFlow<LeaderboardUiState>(LeaderboardUiState.Loading)
     val uiState: StateFlow<LeaderboardUiState> = _uiState.asStateFlow()
@@ -39,8 +43,8 @@ class LeaderboardViewModel @Inject constructor(
         return userId.substring(0, 6).uppercase()
     }
 
-    val friendCode: StateFlow<String> = userRepository.getProfileFlow("")
-        .map { it?.friendCode ?: friendCodeFromUserId(it?.deviceId ?: "") }
+    val friendCode: StateFlow<String> = userRepository.getProfileFlow(deviceId)
+        .map { it?.friendCode ?: friendCodeFromUserId(it?.deviceId ?: deviceId) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "------")
 
     private var observeJob: kotlinx.coroutines.Job? = null
@@ -57,7 +61,7 @@ class LeaderboardViewModel @Inject constructor(
                 observeJob = viewModelScope.launch {
                     combine(
                         leaderboardRepository.observeLeaderboard(period),
-                        userRepository.getProfileFlow("")
+                        userRepository.getProfileFlow(deviceId)
                     ) { entries, profile ->
                         if (entries.isNotEmpty()) {
                             entries

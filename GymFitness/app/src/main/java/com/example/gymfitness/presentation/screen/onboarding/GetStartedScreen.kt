@@ -40,15 +40,23 @@ fun GetStart(
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Handle auth success — always route to Onboarding so user configures goals & routine
+    // Handle auth success — route based on whether the user already has a profile
     LaunchedEffect(authState) {
         if (authState is AuthUiState.Success) {
             val successState = authState as AuthUiState.Success
-            val encodedName = java.net.URLEncoder.encode(
-                successState.displayName.ifEmpty { "" }, "UTF-8"
-            )
-            navController.navigate("onboarding_screen?displayName=$encodedName") {
-                popUpTo(Screen.GetStart.route) { inclusive = true }
+            if (successState.isNewUser) {
+                // New user → go to Onboarding to collect biometrics & goals
+                val encodedName = java.net.URLEncoder.encode(
+                    successState.displayName.ifEmpty { "" }, "UTF-8"
+                )
+                navController.navigate("onboarding_screen?displayName=$encodedName") {
+                    popUpTo(Screen.GetStart.route) { inclusive = true }
+                }
+            } else {
+                // Returning user → go directly to Home
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.GetStart.route) { inclusive = true }
+                }
             }
         }
     }
