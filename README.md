@@ -28,7 +28,7 @@
 
 ## 🏗️ System Architecture
 
-Pulse utilizes a split-tier architecture combining a **Native Kotlin Android Client** with a **RESTful Python FastAPI Server Cluster** and **MongoDB Atlas Cloud**.
+Pulse utilizes a modern architecture combining a **Native Kotlin Android Client** with a single **Unified Python FastAPI Backend** and **MongoDB Atlas Cloud**.
 
 ```mermaid
 graph TD
@@ -40,28 +40,24 @@ graph TD
         Repo <--> Retrofit["Retrofit HTTP Client"]
         WM["WorkManager SyncWorkers"] <--> Room
         WM <--> Retrofit
-        Cam["CameraX & Background Analyzer"] -- "Multipart JPEG" --> FoodAPI
+        Cam["CameraX HUD Scanner"] -- "Multipart JPEG" --> Backend
         HC["Health Connect Client"] --> VM
     end
 
-    subgraph Backend ["Python Microservices Cluster"]
-        MainAPI["Main API Service (Port 5000)"]
-        FoodAPI["AI Food Analyser Service (Port 8000)"]
-        AIPlanner["AI Workout Engine + ExerciseDB"]
-        PyTorch["PyTorch MobileNetV2 Model"]
+    subgraph Backend ["Unified Python FastAPI Backend (Render Cloud)"]
+        WorkoutsEngine["AI Workout Planner (ExerciseDB)"]
+        ProfileEngine["User Biometrics & Macro Targets"]
+        LeaderboardEngine["Squad Leaderboard & Gamification"]
+        FoodScanner["Food Vision AI (MobileNetV2 / Nutrients)"]
+        StaticGIFs["Static Demonstration GIFs (/static/exercise-gifs)"]
     end
 
-    subgraph Database ["Cloud & Static Storage"]
+    subgraph Database ["Cloud Database"]
         Mongo[("MongoDB Atlas Cluster")]
-        StaticGIFs["ExerciseDB Demonstration GIFs (/static/exercise-gifs)"]
     end
 
-    Retrofit <-->|"REST & JWT / API Key"| MainAPI
-    MainAPI <--> AIPlanner
-    MainAPI <--> Mongo
-    MainAPI --> StaticGIFs
-    FoodAPI --> PyTorch
-    FoodAPI <--> Mongo
+    Retrofit <-->|"HTTPS / REST & JWT Auth"| Backend
+    Backend <--> Mongo
 ```
 
 ---

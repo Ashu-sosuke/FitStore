@@ -24,7 +24,7 @@ import javax.inject.Singleton
 object NetworkModule {
 
     private const val MAIN_API_URL = "https://pulse-backend-6srs.onrender.com/"
-    private const val FOOD_ANALYSER_URL = "http://192.168.29.171:8000/"
+    private const val FOOD_ANALYSER_URL = "https://pulse-backend-6srs.onrender.com/"
 
 
     @Provides

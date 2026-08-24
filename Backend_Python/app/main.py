@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Security, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import profile, workout, meal, auth, leaderboard
+from app.routes import profile, workout, meal, auth, leaderboard, food_scanner
 import jwt
 from app.database import ping_db, db
 from app.services.dataset_loader import seed_exercise_catalog, DATASET_DIR
@@ -114,6 +114,7 @@ app.include_router(profile.router, prefix="/api/profile", tags=["Profile"], depe
 app.include_router(workout.router, prefix="/api/workouts", tags=["Workouts"], dependencies=[Depends(verify_jwt)])
 app.include_router(meal.router, prefix="/api/meals", tags=["Meals"], dependencies=[Depends(verify_jwt)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"], dependencies=[Depends(verify_jwt)])
+app.include_router(food_scanner.router, tags=["Food Vision Scanner"])
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))

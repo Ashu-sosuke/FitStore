@@ -4,7 +4,8 @@ motor
 pydantic
 pydantic-settings
 python-dotenv
-motor
 pymongo
 certifi
 PyJWT
+Pillow
+python-multipart
