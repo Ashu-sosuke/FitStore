@@ -99,6 +99,7 @@ graph TD
 * **Live Step Progress Bar**: Shows `Today's Steps / 10,000` with completion percentage badge.
 * **Metric Pills**: Real-time Distance ($km$), Active Energy Burned ($kcal$), and Walking Time ($mins$).
 * **Health Connect Sync**: Automatic background synchronization with Google Health Connect for steps, sleep duration, and active calories.
+* **Calorie Measurement Parity**: Both numbers are 100% correct — Google Fit includes your base survival calories (TDEE/BMR), while Pulse displays your pure active workout burn.
 
 ---
 
