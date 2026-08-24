@@ -115,10 +115,6 @@ app.include_router(workout.router, prefix="/api/workouts", tags=["Workouts"], de
 app.include_router(meal.router, prefix="/api/meals", tags=["Meals"], dependencies=[Depends(verify_jwt)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"], dependencies=[Depends(verify_jwt)])
 
-@app.get("/")
-async def root():
-    return {"success": True, "message": "FitStore Python API is running"}
-
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.getenv("PORT", 10000))
     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
