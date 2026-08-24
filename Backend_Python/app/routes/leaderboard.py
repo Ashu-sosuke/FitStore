@@ -7,7 +7,7 @@ import string
 from app.database import db
 from app.models.leaderboard import UserProfile, WorkoutPoints, AddFriendRequest, LeaderboardEntry
 
-router = APIRouter(prefix="/leaderboard", tags=["Leaderboard"])
+router = APIRouter()
 
 # Scoring weights
 SCORE_STEP_WEIGHT = 0.05      # 20 steps = 1 point

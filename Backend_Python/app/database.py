@@ -28,6 +28,7 @@ user_profiles_collection = db.get_collection("userprofiles")
 workouts_collection = db.get_collection("workouts")
 meals_collection = db.get_collection("meals")
 nutrients_collection = db.get_collection("nutrients")
+exercises_catalog_collection = db.get_collection("exercises_catalog")
 
 async def ping_db():
     try:
