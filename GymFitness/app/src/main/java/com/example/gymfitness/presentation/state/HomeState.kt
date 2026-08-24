@@ -5,7 +5,9 @@ import java.time.LocalDate
 data class DayStepEntry(
     val date: LocalDate,
     val dayLabel: String,
-    val steps: Int
+    val steps: Int,
+    val distanceKm: Float = 0f,
+    val caloriesBurned: Int = 0
 )
 
 data class HomeState(
@@ -25,6 +27,8 @@ data class HomeState(
     val userName: String = "User",
     val stepsWalked: Int = 0,
     val stepsTarget: Int = 10000,
+    val distanceKm: Float = 0f,
+    val caloriesBurned: Int = 0,
     val weeklySteps: List<DayStepEntry> = emptyList(),
     val sleepMinutes: Int = 0,
     val currentStreak: Int = 0,

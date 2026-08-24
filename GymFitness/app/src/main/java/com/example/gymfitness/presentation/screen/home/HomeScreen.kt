@@ -306,8 +306,16 @@ fun HomeScreenContent(
                     }
 
                     // 3 Metric Pills: Distance, Burned, Active Time
-                    val distanceKm = String.format(Locale.getDefault(), "%.2f", state.stepsWalked * 0.00075f)
-                    val burnedKcal = (state.stepsWalked * 0.04f).toInt()
+                    val distanceKm = if (state.distanceKm > 0f) {
+                        String.format(Locale.getDefault(), "%.2f", state.distanceKm)
+                    } else {
+                        String.format(Locale.getDefault(), "%.2f", state.stepsWalked * 0.00075f)
+                    }
+                    val burnedKcal = if (state.caloriesBurned > 0) {
+                        state.caloriesBurned
+                    } else {
+                        (state.stepsWalked * 0.04f).toInt()
+                    }
                     val activeMins = state.stepsWalked / 100
 
                     Row(

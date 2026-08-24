@@ -62,8 +62,21 @@ fun AnalyticsScreen(
         selectedDayEntry?.steps ?: 0
     }
 
-    val currentDisplayDistance = String.format(Locale.getDefault(), "%.2f", currentDisplaySteps * 0.000762)
-    val currentDisplayCalories = (currentDisplaySteps * 0.04).toInt().toString()
+    val currentDisplayDistance = if (isSelectedToday && state.distanceKm > 0f) {
+        String.format(Locale.getDefault(), "%.2f", state.distanceKm)
+    } else if (selectedDayEntry != null && selectedDayEntry.distanceKm > 0f) {
+        String.format(Locale.getDefault(), "%.2f", selectedDayEntry.distanceKm)
+    } else {
+        String.format(Locale.getDefault(), "%.2f", currentDisplaySteps * 0.00075f)
+    }
+
+    val currentDisplayCalories = if (isSelectedToday && state.caloriesBurned > 0) {
+        state.caloriesBurned.toString()
+    } else if (selectedDayEntry != null && selectedDayEntry.caloriesBurned > 0) {
+        selectedDayEntry.caloriesBurned.toString()
+    } else {
+        (currentDisplaySteps * 0.04f).toInt().toString()
+    }
 
     Scaffold(
         containerColor = PageBg,

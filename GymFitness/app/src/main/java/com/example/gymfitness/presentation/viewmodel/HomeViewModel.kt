@@ -134,6 +134,16 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            healthConnectManager.distanceKm.collect { dist ->
+                _state.update { it.copy(distanceKm = dist) }
+            }
+        }
+        viewModelScope.launch {
+            healthConnectManager.caloriesBurned.collect { cal ->
+                _state.update { it.copy(caloriesBurned = cal) }
+            }
+        }
     }
 
     private fun observeHealthConnectSleep() {
@@ -155,6 +165,9 @@ class HomeViewModel @Inject constructor(
                 _state.update { currentState ->
                     currentState.copy(
                         weeklySteps = weekly,
+                        stepsWalked = healthConnectManager.healthConnectSteps.value,
+                        distanceKm = healthConnectManager.distanceKm.value,
+                        caloriesBurned = healthConnectManager.caloriesBurned.value,
                         isHealthConnectGranted = healthConnectManager.isAvailable && (weekly.isNotEmpty() || currentState.stepsWalked > 0),
                         isLoading = false
                     )
