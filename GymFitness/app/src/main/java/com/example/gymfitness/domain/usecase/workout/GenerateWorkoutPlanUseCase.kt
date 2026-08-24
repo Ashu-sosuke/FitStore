@@ -51,7 +51,7 @@ class GenerateWorkoutPlanUseCase @Inject constructor(
                     bodyParts = listOf("Body"),
                     equipments = listOf("Gym / Dumbbell"),
                     instructions = listOf("Perform with controlled eccentric cadence.", "Maintain full range of motion."),
-                    gifUrl = "",
+                    gifUrl = resolveExerciseGif(catalogEx.name),
                     targetSets = targetSets,
                     targetReps = repScheme,
                     suggestedWeightKg = if (isBulking) pref.weightKg * 0.4f else null,
@@ -101,5 +101,26 @@ class GenerateWorkoutPlanUseCase @Inject constructor(
             recommendedCaloricSurplusOrDeficit = if (isBulking) "+300 kcal Surplus" else "-400 kcal Deficit",
             nutritionTip = "Ensure adequate protein consumption (1.8-2.2g per kg) and progressive overload."
         )
+    }
+
+    companion object {
+        fun resolveExerciseGif(name: String): String {
+            val norm = name.lowercase()
+            return when {
+                norm.contains("squat") -> "/static/exercise-gifs/2ORFMoR.gif"
+                norm.contains("bench") || norm.contains("press") -> "/static/exercise-gifs/3eGE2JC.gif"
+                norm.contains("push-up") || norm.contains("pushup") -> "/static/exercise-gifs/3tAXPQ6.gif"
+                norm.contains("lat") || norm.contains("pull") -> "/static/exercise-gifs/3TZduzM.gif"
+                norm.contains("deadlift") || norm.contains("rdl") -> "/static/exercise-gifs/4dF3maG.gif"
+                norm.contains("curl") -> "/static/exercise-gifs/5bpPTHv.gif"
+                norm.contains("tricep") || norm.contains("pushdown") -> "/static/exercise-gifs/5uFK1xr.gif"
+                norm.contains("lateral") || norm.contains("raise") -> "/static/exercise-gifs/6bOA1Oi.gif"
+                norm.contains("leg press") -> "/static/exercise-gifs/2Qh2J1e.gif"
+                norm.contains("lunge") -> "/static/exercise-gifs/6HiHHe0.gif"
+                norm.contains("plank") || norm.contains("crunch") || norm.contains("abs") -> "/static/exercise-gifs/6kSxYnw.gif"
+                norm.contains("calf") -> "/static/exercise-gifs/2ORFMoR.gif"
+                else -> "/static/exercise-gifs/05Cf2v8.gif"
+            }
+        }
     }
 }

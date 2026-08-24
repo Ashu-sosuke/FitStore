@@ -1016,11 +1016,16 @@ fun ExerciseDetailCard(exercise: GeneratedExercise) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val fullGifUrl = remember(exercise.gifUrl) {
-                    if (exercise.gifUrl.startsWith("/")) {
-                        "https://pulse-backend-6srs.onrender.com${exercise.gifUrl}"
-                    } else {
+                val fullGifUrl = remember(exercise.gifUrl, exercise.name) {
+                    val rawUrl = if (exercise.gifUrl.isNotBlank()) {
                         exercise.gifUrl
+                    } else {
+                        com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase.resolveExerciseGif(exercise.name)
+                    }
+                    if (rawUrl.startsWith("/")) {
+                        "https://pulse-backend-6srs.onrender.com$rawUrl"
+                    } else {
+                        rawUrl
                     }
                 }
 

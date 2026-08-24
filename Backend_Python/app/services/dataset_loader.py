@@ -2,9 +2,15 @@ import os
 import json
 from typing import List, Dict, Any, Optional
 
-DATASET_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "exercisedb_v1_sample")
-)
+candidate_1 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "exercisedb_v1_sample"))
+candidate_2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "exercisedb_v1_sample"))
+
+if os.path.exists(candidate_1):
+    DATASET_DIR = candidate_1
+elif os.path.exists(candidate_2):
+    DATASET_DIR = candidate_2
+else:
+    DATASET_DIR = candidate_1
 
 # In-memory cached dataset
 _CACHED_EXERCISES: Optional[List[Dict[str, Any]]] = None
