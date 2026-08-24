@@ -73,6 +73,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+@app.head("/")
+async def root():
+    return {"status": "healthy", "service": "Pulse API", "version": "2.0"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 # Static Files for Exercise Demonstration GIFs
 gifs_path = os.path.join(DATASET_DIR, "gifs_360x360")
 if not os.path.exists(gifs_path):
