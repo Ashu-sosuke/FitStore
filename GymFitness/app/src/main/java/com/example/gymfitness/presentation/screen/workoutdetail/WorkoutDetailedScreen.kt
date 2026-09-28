@@ -1,47 +1,49 @@
 package com.example.gymfitness.presentation.screen.workoutdetail
 
-import android.provider.Settings
-import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.gymfitness.presentation.components.BaseCard
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.gymfitness.domain.models.Exercise
+import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import com.example.gymfitness.presentation.components.CategoryBadge
+import com.example.gymfitness.presentation.viewmodel.WorkoutViewModel
 import com.example.gymfitness.ui.theme.*
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutDetailScreen(
     navController: NavController, 
     workoutId: String?,
-    viewModel: com.example.gymfitness.presentation.viewmodel.WorkoutViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    viewModel: WorkoutViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(workoutId) {
         workoutId?.toLongOrNull()?.let { id ->
             viewModel.fetchWorkoutDetails(viewModel.deviceId, id)
@@ -49,198 +51,264 @@ fun WorkoutDetailScreen(
     }
 
     val currentWorkout by viewModel.currentWorkout.collectAsState()
-    val workoutTitle = currentWorkout?.name ?: "Workout Detail"
+    val workoutTitle = currentWorkout?.name ?: "Workout Details"
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(workoutTitle, style = Typography.titleLarge, color = InkBlack) },
+                title = {
+                    Text(
+                        text = workoutTitle,
+                        style = Typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                        color = OffWhite,
+                        maxLines = 1
+                    )
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.popBackStack() },
-                        modifier = Modifier.padding(start = 8.dp).background(CardSurface, CircleShape)
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .background(SurfaceDark, CircleShape)
+                            .border(1.dp, StrokeDark, CircleShape)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = InkBlack)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = OffWhite
+                        )
                     }
                 },
                 actions = {
-                    TextButton(onClick = { navController.popBackStack() }) {
-                        Text("FINISH", color = SunsetOrange, style = Typography.labelMedium.copy(fontWeight = FontWeight.Black))
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Plan",
+                            tint = Color(0xFFEF4444)
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = PageBg)
             )
         },
         containerColor = PageBg
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            // Live Interactive Timer
-            WorkoutTimerHeader()
-
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(PageBg)
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(20.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Total Badge
+                // Header Plan Summary Card
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    val exerciseList = currentWorkout?.exercises ?: emptyList()
+                    val totalSets = exerciseList.sumOf { it.sets }
+                    val estDuration = maxOf(30, exerciseList.size * 8)
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, StrokeDark, RoundedCornerShape(16.dp))
                     ) {
-                        Text("Exercises", style = Typography.titleLarge, color = InkBlack)
-                        CategoryBadge("Total: ${currentWorkout?.exercises?.size ?: 0}")
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = currentWorkout?.splitType?.displayName ?: "CUSTOM SPLIT",
+                                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                                    color = LimeGreen
+                                )
+                                CategoryBadge(
+                                    text = "${exerciseList.size} Exercises",
+                                    colorTint = LimeTintDark,
+                                    textColor = LimeGreen
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = workoutTitle,
+                                style = Typography.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.Black),
+                                color = OffWhite
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            HorizontalDivider(color = StrokeDark)
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("TOTAL SETS", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
+                                    Text("$totalSets sets", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                                }
+                                Column {
+                                    Text("EST. TIME", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
+                                    Text("$estDuration mins", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                                }
+                                Column {
+                                    Text("TYPE", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
+                                    Text("Hypertrophy", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = LimeDeepDark)
+                                }
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
 
-                items(currentWorkout?.exercises ?: emptyList()) { exercise ->
-                    ExerciseLogCard(exercise = exercise)
+                // Exercises List Section
+                item {
+                    Text(
+                        text = "Workout Movements",
+                        style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = OffWhite
+                    )
+                }
+
+                itemsIndexed(currentWorkout?.exercises ?: emptyList()) { index, exercise ->
+                    ExerciseViewerCard(index = index + 1, exercise = exercise)
+                }
+
+                item {
+                    Spacer(Modifier.height(40.dp))
                 }
             }
         }
     }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor = SurfaceDark,
+            title = {
+                Text("Delete Workout Plan?", style = Typography.titleLarge, color = OffWhite)
+            },
+            text = {
+                Text(
+                    "Are you sure you want to remove '$workoutTitle' from your library?",
+                    style = Typography.bodyMedium,
+                    color = TextMutedDark
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    workoutId?.toLongOrNull()?.let { wid ->
+                        viewModel.deleteWorkout(wid) {
+                            Toast.makeText(context, "Workout plan removed", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        }
+                    }
+                }) {
+                    Text("DELETE", color = Color(0xFFEF4444), fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("CANCEL", color = OffWhite)
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun WorkoutTimerHeader() {
-    var seconds by remember { mutableIntStateOf(0) }
-    
-    // Live Timer Effect
-    LaunchedEffect(Unit) {
-        while(true) {
-            delay(1000)
-            seconds++
-        }
+fun ExerciseViewerCard(index: Int, exercise: Exercise) {
+    val context = LocalContext.current
+    val fullGifUrl = remember(exercise.name) {
+        val rawUrl = GenerateWorkoutPlanUseCase.resolveExerciseGif(exercise.name)
+        if (rawUrl.startsWith("/")) "https://pulse-backend-6srs.onrender.com$rawUrl" else rawUrl
     }
 
-    val timeString = remember(seconds) {
-        val h = seconds / 3600
-        val m = (seconds % 3600) / 60
-        val s = seconds % 60
-        String.format("%02d:%02d:%02d", h, m, s)
-    }
-
-    Box(
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardSurface)
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
+            .border(1.dp, StrokeDark, RoundedCornerShape(14.dp))
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("WORKOUT ELAPSED", style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMuted)
-            Text(timeString, style = Typography.displayLarge, color = SunsetOrange)
-        }
-    }
-}
-
-@Composable
-fun ExerciseLogCard(exercise: com.example.gymfitness.domain.models.Exercise) {
-    var expanded by remember { mutableStateOf(false) }
-    val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f)
-
-    BaseCard(
-        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.animateContentSize()
-    ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Box(modifier = Modifier.size(8.dp, 24.dp).clip(RoundedCornerShape(4.dp)).background(SunsetOrange))
-                Spacer(Modifier.width(12.dp))
-                Text(exercise.name, style = Typography.titleLarge, color = InkBlack, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowDown, null, tint = TextMuted, modifier = Modifier.rotate(rotation))
-            }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("SET", modifier = Modifier.weight(1f), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMuted)
-                    Text("KG", modifier = Modifier.weight(2f), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMuted)
-                    Text("REPS", modifier = Modifier.weight(2f), style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = TextMuted)
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                val numSets = if (exercise.sets > 0) exercise.sets else 3 // fallback if 0 sets
-                for (i in 1..numSets) {
-                    SetInputRow(
-                        setNum = i, 
-                        initialWeight = if (exercise.weight > 0) exercise.weight.toString() else "",
-                        initialReps = if (exercise.reps > 0) exercise.reps.toString() else ""
+        Row(
+            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Thumbnail / Animation GIF
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceAltDark),
+                contentAlignment = Alignment.Center
+            ) {
+                if (fullGifUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(fullGifUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = exercise.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.FitnessCenter,
+                        contentDescription = null,
+                        tint = LimeGreen,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun SetInputRow(setNum: Int, initialWeight: String = "", initialReps: String = "") {
-    var isCompleted by remember { mutableStateOf(false) }
-    var weight by remember { mutableStateOf(initialWeight) }
-    var reps by remember { mutableStateOf(initialReps) }
+            Spacer(Modifier.width(12.dp))
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isCompleted) OrangeTint else Color.Transparent)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("$setNum", modifier = Modifier.weight(1f), style = Typography.titleMedium.copy(fontWeight = FontWeight.Black), color = if(isCompleted) SunsetOrange else InkBlack)
-
-        OutlinedTextField(
-            value = weight,
-            onValueChange = { weight = it },
-            placeholder = { Text("0", color = TextMutedDark) },
-            modifier = Modifier.weight(2f).height(50.dp).padding(end = 8.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceAltDark,
-                unfocusedContainerColor = SurfaceAltDark,
-                focusedTextColor = OffWhite,
-                unfocusedTextColor = OffWhite,
-                focusedBorderColor = LimeGreen,
-                unfocusedBorderColor = StrokeDark
-            ),
-            shape = RoundedCornerShape(10.dp),
-            textStyle = Typography.bodyMedium
-        )
-
-        OutlinedTextField(
-            value = reps,
-            onValueChange = { reps = it },
-            placeholder = { Text("0", color = TextMutedDark) },
-            modifier = Modifier.weight(2f).height(50.dp).padding(end = 8.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceAltDark,
-                unfocusedContainerColor = SurfaceAltDark,
-                focusedTextColor = OffWhite,
-                unfocusedTextColor = OffWhite,
-                focusedBorderColor = LimeGreen,
-                unfocusedBorderColor = StrokeDark
-            ),
-            shape = RoundedCornerShape(10.dp),
-            textStyle = Typography.bodyMedium
-        )
-
-        IconButton(
-            onClick = { isCompleted = !isCompleted },
-            modifier = Modifier.weight(1f)
-        ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = if (isCompleted) LimeGreen else StrokeDark,
-                modifier = Modifier.size(28.dp)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "$index. ${exercise.name}",
+                    fontWeight = FontWeight.Bold,
+                    color = OffWhite,
+                    fontSize = 15.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${exercise.sets} sets × ${exercise.reps} reps",
+                        color = LimeGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    if (exercise.weight > 0.0) {
+                        Text(
+                            text = "• ${exercise.weight} kg",
+                            color = TextMutedDark,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Target: ${exercise.primaryMuscle.displayName}",
+                    color = TextMutedDark,
+                    fontSize = 11.sp
+                )
+            }
         }
     }
 }

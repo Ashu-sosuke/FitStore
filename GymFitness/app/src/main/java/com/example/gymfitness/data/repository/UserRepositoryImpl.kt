@@ -19,11 +19,23 @@ class UserRepositoryImpl @Inject constructor(
 ) : UserRepository {
 
     override suspend fun saveProfile(profile: UserProfile) {
-        // Save locally first with isSynced = false
-        userDao.insertUser(profile.toEntity().copy(isSynced = false))
-        
-        // Trigger background sync
-        syncManager.scheduleSync()
+        // 1. Save locally first
+        val localEntity = profile.toEntity().copy(isSynced = false)
+        userDao.insertUser(localEntity)
+
+        // 2. Direct network sync to backend (ensures immediate persistence to MongoDB)
+        try {
+            val remoteProfile = profileApi.createProfile(profile.toDto())
+            userDao.insertUser(remoteProfile.toDomain().toEntity().copy(isSynced = true))
+        } catch (e: Exception) {
+            try {
+                val updatedProfile = profileApi.updateProfile(profile.deviceId, profile.toDto())
+                userDao.insertUser(updatedProfile.toDomain().toEntity().copy(isSynced = true))
+            } catch (updateEx: Exception) {
+                // If offline or network unavailable, schedule background WorkManager sync
+                syncManager.scheduleSync()
+            }
+        }
     }
 
     override suspend fun getProfile(deviceId: String): UserProfile? {

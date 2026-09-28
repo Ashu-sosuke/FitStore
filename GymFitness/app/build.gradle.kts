@@ -62,6 +62,15 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+            all { test ->
+                test.jvmArgs("-Xmx3072m")
+            }
+        }
+    }
 }
 
 // Force all Kotlin tasks (including KSP) to use JVM 21

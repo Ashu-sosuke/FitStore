@@ -19,6 +19,12 @@ interface WorkoutDao {
     @Delete
     suspend fun deleteWorkout(workout: WorkoutEntity)
 
+    @Query("DELETE FROM workouts")
+    suspend fun clearAllWorkouts()
+
+    @Query("DELETE FROM workouts WHERE id = :workoutId")
+    suspend fun deleteWorkoutById(workoutId: Long)
+
     @Transaction
     @Query("SELECT * FROM workouts ORDER BY createdAtMs DESC")
     fun getWorkouts(): Flow<List<WorkoutWithExercises>>

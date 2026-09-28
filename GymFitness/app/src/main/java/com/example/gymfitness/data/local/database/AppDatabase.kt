@@ -25,7 +25,7 @@ import com.example.gymfitness.data.local.dao.LeaderboardDao
         WeightEntity::class,
         LeaderboardEntity::class
     ],
-    version = 9,
+    version = 11,
 
     exportSchema = false
 )

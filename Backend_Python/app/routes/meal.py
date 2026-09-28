@@ -2,8 +2,9 @@ from fastapi import APIRouter, HTTPException, Body, status, Query
 from app.models.meal import Meal, MealCreate, Nutrient, NutrientCreate
 from app.database import meals_collection, user_profiles_collection, nutrients_collection
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
+import re
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ async def add_meal(meal: MealCreate = Body(...)):
         raise HTTPException(status_code=404, detail="User profile not found. Please register first.")
         
     new_meal = meal.dict()
-    new_meal["createdAt"] = datetime.utcnow()
+    new_meal["createdAt"] = datetime.now(timezone.utc)
     
     result = await meals_collection.insert_one(new_meal)
     created_meal = await meals_collection.find_one({"_id": result.inserted_id})
@@ -36,7 +37,7 @@ async def list_meals(device_id: str, limit: int = 20, skip: int = 0):
 @router.get("/summary/{device_id}", response_description="Get daily nutrition summary")
 async def get_daily_summary(device_id: str):
     # Today's range
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     
     pipeline = [
         {"$match": {"deviceId": device_id, "createdAt": {"$gte": today}}},
@@ -64,7 +65,8 @@ async def get_daily_summary(device_id: str):
 @router.get("/search-food", response_description="Search for food items in the database", response_model=List[Nutrient])
 async def search_food(query: str = Query(..., min_length=1)):
     # Case-insensitive regex search in nutrients collection
-    foods = await nutrients_collection.find({"food_name": {"$regex": query, "$options": "i"}}).to_list(10)
+    safe_query = re.escape(query)
+    foods = await nutrients_collection.find({"food_name": {"$regex": safe_query, "$options": "i"}}).to_list(10)
     for f in foods:
         f["_id"] = str(f["_id"])
     return foods
@@ -72,7 +74,8 @@ async def search_food(query: str = Query(..., min_length=1)):
 @router.post("/add-food", response_description="Add a new custom food item to the database", response_model=Nutrient, status_code=status.HTTP_201_CREATED)
 async def add_custom_food(food: NutrientCreate = Body(...)):
     # Check if a food with the same name exists (case-insensitive)
-    existing = await nutrients_collection.find_one({"food_name": {"$regex": f"^{food.food_name}$", "$options": "i"}})
+    safe_name = re.escape(food.food_name)
+    existing = await nutrients_collection.find_one({"food_name": {"$regex": f"^{safe_name}$", "$options": "i"}})
     if existing:
         existing["_id"] = str(existing["_id"])
         return existing

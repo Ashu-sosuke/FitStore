@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import random
 import string
@@ -29,12 +29,14 @@ async def get_or_generate_code(device_id: str):
     friend_code = profile.get("friendCode")
     if not friend_code or friend_code == "------":
         # Generate a unique 6-character code
-        while True:
+        for _attempt in range(100):
             code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
             existing = await db["userprofiles"].find_one({"friendCode": code})
             if not existing:
                 friend_code = code
                 break
+        else:
+            raise HTTPException(status_code=500, detail="Could not generate a unique friend code")
         await db["userprofiles"].update_one(
             {"_id": profile["_id"]},
             {"$set": {"friendCode": friend_code}}
@@ -70,7 +72,7 @@ async def register_user(profile: UserProfile):
             "weeklySteps": 0,
             "allTimeSteps": 0,
             "stepsToday": 0,
-            "lastStepsUpdate": datetime.utcnow().strftime("%Y-%m-%d")
+            "lastStepsUpdate": datetime.now(timezone.utc).strftime("%Y-%m-%d")
         }},
         upsert=True
     )
@@ -92,7 +94,7 @@ async def update_points(points_req: WorkoutPoints):
     for k in keys_to_delete:
         LEADERBOARD_CACHE.pop(k, None)
 
-    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     stats = await db["leaderboard_stats"].find_one({"userId": user_id})
     if not stats:
         stats = {
@@ -112,7 +114,7 @@ async def update_points(points_req: WorkoutPoints):
     try:
         if last_update:
             last_dt = datetime.strptime(last_update, "%Y-%m-%d")
-            if last_dt.isocalendar()[1] != datetime.utcnow().isocalendar()[1]:
+            if last_dt.isocalendar()[1] != datetime.now(timezone.utc).isocalendar()[1]:
                 stats["weeklySteps"] = 0
     except Exception:
         pass
@@ -134,7 +136,7 @@ async def update_points(points_req: WorkoutPoints):
 
     # Calculate actual workouts count
     all_time_workouts = await db["workouts"].count_documents({"deviceId": user_id})
-    start_of_week = datetime.utcnow() - timedelta(days=7)
+    start_of_week = datetime.now(timezone.utc) - timedelta(days=7)
     weekly_workouts = await db["workouts"].count_documents({"deviceId": user_id, "createdAt": {"$gte": start_of_week}})
 
     stats["workoutsThisWeek"] = weekly_workouts
@@ -205,14 +207,16 @@ async def get_friends_leaderboard(userId: str, period: str = "weekly"):
     
     # Query profiles while respecting privacy configurations
     profiles_cursor = db["userprofiles"].find({
-        "$or": [
-            {"userId": {"$in": user_ids}},
-            {"deviceId": {"$in": user_ids}}
-        ],
-        "$or": [
-            {"userId": userId},
-            {"deviceId": userId},
-            {"showOnLeaderboards": {"$ne": False}}
+        "$and": [
+            {"$or": [
+                {"userId": {"$in": user_ids}},
+                {"deviceId": {"$in": user_ids}}
+            ]},
+            {"$or": [
+                {"userId": userId},
+                {"deviceId": userId},
+                {"showOnLeaderboards": {"$ne": False}}
+            ]}
         ]
     })
     profiles = await profiles_cursor.to_list(length=None)

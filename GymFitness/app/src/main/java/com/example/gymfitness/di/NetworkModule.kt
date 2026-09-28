@@ -5,6 +5,7 @@ import com.example.gymfitness.data.remote.api.MealApiService
 import com.example.gymfitness.data.remote.api.ProfileApiService
 import com.example.gymfitness.data.remote.api.WorkoutApiService
 import com.example.gymfitness.data.remote.api.LeaderboardApiService
+import com.example.gymfitness.data.remote.api.AuthApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +18,7 @@ import com.example.gymfitness.BuildConfig
 import com.example.gymfitness.utils.TokenManager
 import okhttp3.CertificatePinner
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -31,7 +33,8 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
         }
 
         val authInterceptor = Interceptor { chain ->
@@ -49,15 +52,20 @@ object NetworkModule {
             chain.proceed(requestBuilder.build())
         }
 
-        val certificatePinner = CertificatePinner.Builder()
-            .add("192.168.29.171", "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") // Replace with actual hash
-            .build()
-
+        // Certificate pinning: only pin for production domain with a real hash.
+        // Render.com uses dynamic TLS certificates, so pinning is not practical here.
+        // For a fixed-infrastructure domain, uncomment and configure:
+        // val certificatePinner = CertificatePinner.Builder()
+        //     .add("your-production-domain.com", "sha256/YOUR_REAL_CERT_HASH=")
+        //     .build()
 
         return OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .addInterceptor(logging)
             .addInterceptor(authInterceptor)
-            .certificatePinner(certificatePinner)
             .build()
     }
 
@@ -111,5 +119,11 @@ object NetworkModule {
     @Singleton
     fun provideLeaderboardApiService(@javax.inject.Named("MainRetrofit") retrofit: Retrofit): LeaderboardApiService {
         return retrofit.create(LeaderboardApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthApiService(@javax.inject.Named("MainRetrofit") retrofit: Retrofit): AuthApiService {
+        return retrofit.create(AuthApiService::class.java)
     }
 }

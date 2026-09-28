@@ -17,7 +17,19 @@ data class PlanGenerationRequestDto(
     val sessionDurationMinutes: Int,
     val experienceLevel: String,
     val availableEquipment: List<String>?,
-    val focusMuscles: List<String>?
+    val goalPriority: String? = "balanced",
+    val focusMuscles: List<String>? = emptyList(),
+    val avoidMuscles: List<String>? = emptyList(),
+    val preferredExercises: List<String>? = emptyList(),
+    val dislikedExercises: List<String>? = emptyList(),
+    val physicalLimitations: List<String>? = emptyList(),
+    val trainingStyle: String? = "bodybuilding",
+    val intensityPreference: String? = "moderate",
+    val sleepHours: String? = "7_8h",
+    val stressLevel: String? = "moderate",
+    val trainingLocation: String? = "commercial_gym",
+    val warmupIncluded: Boolean = true,
+    val progressionModel: String? = "progressive_overload"
 )
 
 data class GeneratedExerciseDto(
@@ -33,7 +45,9 @@ data class GeneratedExerciseDto(
     val targetReps: String,
     val suggestedWeightKg: Float?,
     val restSeconds: Int,
-    val estimatedMinutes: Float
+    val estimatedMinutes: Float,
+    val rirTarget: Int? = 2,
+    val progressionProtocol: String? = null
 )
 
 data class DailyWorkoutRoutineDto(
@@ -43,6 +57,10 @@ data class DailyWorkoutRoutineDto(
     val isRestDay: Boolean = false,
     val targetFocus: String,
     val estimatedDurationMinutes: Int,
+    val warmupMinutes: Int = 5,
+    val warmupNotes: List<String>? = emptyList(),
+    val cooldownMinutes: Int = 5,
+    val cooldownNotes: List<String>? = emptyList(),
     val exercises: List<GeneratedExerciseDto>?
 )
 
@@ -57,7 +75,10 @@ data class GeneratedWorkoutPlanDto(
     val weeklyVolumeScore: Float,
     val dailyRoutines: List<DailyWorkoutRoutineDto>,
     val recommendedCaloricSurplusOrDeficit: String,
-    val nutritionTip: String
+    val nutritionTip: String,
+    val progressionOverview: String? = null,
+    val injurySafetyNotes: List<String>? = null,
+    val recoveryAdvisory: String? = null
 )
 
 data class AdoptWorkoutPlanRequestDto(
@@ -83,7 +104,19 @@ fun PlanGenerationPreferences.toDto(): PlanGenerationRequestDto = PlanGeneration
     sessionDurationMinutes = sessionDurationMinutes,
     experienceLevel = experienceLevel,
     availableEquipment = availableEquipment,
-    focusMuscles = focusMuscles
+    goalPriority = goalPriority,
+    focusMuscles = focusMuscles,
+    avoidMuscles = avoidMuscles,
+    preferredExercises = preferredExercises,
+    dislikedExercises = dislikedExercises,
+    physicalLimitations = physicalLimitations,
+    trainingStyle = trainingStyle,
+    intensityPreference = intensityPreference,
+    sleepHours = sleepHours,
+    stressLevel = stressLevel,
+    trainingLocation = trainingLocation,
+    warmupIncluded = warmupIncluded,
+    progressionModel = progressionModel
 )
 
 fun GeneratedExerciseDto.toDomain(): GeneratedExercise = GeneratedExercise(
@@ -99,7 +132,9 @@ fun GeneratedExerciseDto.toDomain(): GeneratedExercise = GeneratedExercise(
     targetReps = targetReps,
     suggestedWeightKg = suggestedWeightKg,
     restSeconds = restSeconds,
-    estimatedMinutes = estimatedMinutes
+    estimatedMinutes = estimatedMinutes,
+    rirTarget = rirTarget ?: 2,
+    progressionProtocol = progressionProtocol
 )
 
 fun DailyWorkoutRoutineDto.toDomain(): DailyWorkoutRoutine = DailyWorkoutRoutine(
@@ -109,6 +144,10 @@ fun DailyWorkoutRoutineDto.toDomain(): DailyWorkoutRoutine = DailyWorkoutRoutine
     isRestDay = isRestDay,
     targetFocus = targetFocus,
     estimatedDurationMinutes = estimatedDurationMinutes,
+    warmupMinutes = warmupMinutes,
+    warmupNotes = warmupNotes ?: emptyList(),
+    cooldownMinutes = cooldownMinutes,
+    cooldownNotes = cooldownNotes ?: emptyList(),
     exercises = exercises?.map { it.toDomain() } ?: emptyList()
 )
 
@@ -123,7 +162,10 @@ fun GeneratedWorkoutPlanDto.toDomain(): GeneratedWorkoutPlan = GeneratedWorkoutP
     weeklyVolumeScore = weeklyVolumeScore,
     dailyRoutines = dailyRoutines.map { it.toDomain() },
     recommendedCaloricSurplusOrDeficit = recommendedCaloricSurplusOrDeficit,
-    nutritionTip = nutritionTip
+    nutritionTip = nutritionTip,
+    progressionOverview = progressionOverview,
+    injurySafetyNotes = injurySafetyNotes,
+    recoveryAdvisory = recoveryAdvisory
 )
 
 fun GeneratedWorkoutPlan.toDto(): GeneratedWorkoutPlanDto = GeneratedWorkoutPlanDto(
@@ -143,6 +185,10 @@ fun GeneratedWorkoutPlan.toDto(): GeneratedWorkoutPlanDto = GeneratedWorkoutPlan
             isRestDay = r.isRestDay,
             targetFocus = r.targetFocus,
             estimatedDurationMinutes = r.estimatedDurationMinutes,
+            warmupMinutes = r.warmupMinutes,
+            warmupNotes = r.warmupNotes,
+            cooldownMinutes = r.cooldownMinutes,
+            cooldownNotes = r.cooldownNotes,
             exercises = r.exercises.map { e ->
                 GeneratedExerciseDto(
                     exerciseId = e.exerciseId,
@@ -157,11 +203,16 @@ fun GeneratedWorkoutPlan.toDto(): GeneratedWorkoutPlanDto = GeneratedWorkoutPlan
                     targetReps = e.targetReps,
                     suggestedWeightKg = e.suggestedWeightKg,
                     restSeconds = e.restSeconds,
-                    estimatedMinutes = e.estimatedMinutes
+                    estimatedMinutes = e.estimatedMinutes,
+                    rirTarget = e.rirTarget,
+                    progressionProtocol = e.progressionProtocol
                 )
             }
         )
     },
     recommendedCaloricSurplusOrDeficit = recommendedCaloricSurplusOrDeficit,
-    nutritionTip = nutritionTip
+    nutritionTip = nutritionTip,
+    progressionOverview = progressionOverview,
+    injurySafetyNotes = injurySafetyNotes,
+    recoveryAdvisory = recoveryAdvisory
 )

@@ -1,36 +1,35 @@
 package com.example.gymfitness.presentation.screen.workouts
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import com.example.gymfitness.domain.models.DailyWorkoutRoutine
-import com.example.gymfitness.domain.models.GeneratedExercise
-import com.example.gymfitness.domain.models.GeneratedWorkoutPlan
+import com.example.gymfitness.domain.models.SplitType
+import com.example.gymfitness.domain.models.Workout
+import com.example.gymfitness.presentation.components.CategoryBadge
+import com.example.gymfitness.presentation.components.GhostButton
+import com.example.gymfitness.presentation.components.PrimaryButton
 import com.example.gymfitness.presentation.componts.BottomNavBar
 import com.example.gymfitness.presentation.navigation.Screen
-import com.example.gymfitness.presentation.viewmodel.WeekdayTabItem
 import com.example.gymfitness.presentation.viewmodel.WorkoutViewModel
 import com.example.gymfitness.ui.theme.*
 
@@ -39,52 +38,11 @@ fun WorkoutScreen(
     navController: NavController,
     viewModel: WorkoutViewModel = hiltViewModel()
 ) {
-    val generatedPlan by viewModel.generatedPlan.collectAsState()
-    val isGenerating by viewModel.isGeneratingPlan.collectAsState()
-    val weekdays by viewModel.weekdays.collectAsState()
-    val selectedWeekday by viewModel.selectedWeekday.collectAsState()
+    val filteredWorkouts by viewModel.filteredWorkouts.collectAsState()
     val allWorkouts by viewModel.workouts.collectAsState()
-
-    WorkoutScreenContent(
-        plan = generatedPlan,
-        isGenerating = isGenerating,
-        weekdays = weekdays,
-        selectedWeekday = selectedWeekday,
-        onSelectWeekday = viewModel::selectWeekday,
-        onStartWorkout = { routine ->
-            // If local workout exists for routine name, open its detail, or create plan
-            val existing = allWorkouts.find { it.name.contains(routine.splitCategory, ignoreCase = true) || it.name.contains(routine.dayName, ignoreCase = true) }
-            if (existing != null && existing.id != null) {
-                navController.navigate(Screen.WorkoutDetail.createRoute(existing.id))
-            } else {
-                navController.navigate(Screen.CreatePlan.route)
-            }
-        },
-        onConfigurePlan = { navController.navigate(Screen.PlanGenerator.route) },
-        navController = navController
-    )
-}
-
-@Composable
-fun WorkoutScreenContent(
-    plan: GeneratedWorkoutPlan?,
-    isGenerating: Boolean,
-    weekdays: List<WeekdayTabItem>,
-    selectedWeekday: Int,
-    onSelectWeekday: (Int) -> Unit,
-    onStartWorkout: (DailyWorkoutRoutine) -> Unit,
-    onConfigurePlan: () -> Unit,
-    navController: NavController
-) {
-    // Resolve routine for selected weekday
-    val activeRoutines = plan?.dailyRoutines ?: emptyList()
-    val selectedRoutine: DailyWorkoutRoutine? = if (selectedWeekday in activeRoutines.indices) {
-        activeRoutines[selectedWeekday]
-    } else {
-        activeRoutines.firstOrNull()
-    }
-
-    val selectedWeekdayItem = weekdays.getOrNull(selectedWeekday)
+    val selectedSplit by viewModel.selectedSplit.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         bottomBar = { BottomNavBar(navController = navController) },
@@ -100,7 +58,8 @@ fun WorkoutScreenContent(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp).statusBarsPadding())
-                // Top Header
+                
+                // Top Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -108,433 +67,244 @@ fun WorkoutScreenContent(
                 ) {
                     Column {
                         Text(
-                            text = if (selectedWeekdayItem?.isToday == true) "Today's Training" else "${selectedWeekdayItem?.fullName ?: "Scheduled"} Training",
+                            text = "Workout Library",
                             fontWeight = FontWeight.Black,
                             color = OffWhite,
-                            fontSize = 24.sp
+                            fontSize = 26.sp
                         )
                         Text(
-                            text = plan?.title ?: "Personalized Weekly Routine",
-                            color = LimeDeepDark,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "${allWorkouts.size} Saved Plans & Splits",
+                            color = TextMutedDark,
+                            fontSize = 13.sp
                         )
                     }
 
-                    IconButton(
-                        onClick = onConfigurePlan,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(SurfaceDark)
-                            .border(1.dp, StrokeDark, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Adjust Plan",
-                            tint = LimeGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = { navController.navigate(Screen.PlanGenerator.route) },
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(LimeTintDark)
+                                .border(1.dp, LimeGreen.copy(alpha = 0.4f), CircleShape)
+                        ) {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = "AI Split", tint = LimeGreen, modifier = Modifier.size(20.dp))
+                        }
+
+                        IconButton(
+                            onClick = { navController.navigate(Screen.CreatePlan.route) },
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(SurfaceDark)
+                                .border(1.dp, StrokeDark, CircleShape)
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = "Create Plan", tint = OffWhite, modifier = Modifier.size(22.dp))
+                        }
                     }
                 }
             }
 
-            // Ascending Weekdays Bar (Mon -> Sun)
+            // Quick Create / Generate Action Banner
             item {
-                Text(
-                    text = "Weekly Schedule",
-                    fontWeight = FontWeight.Bold,
-                    color = TextMutedDark,
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, LimeGreen.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 ) {
-                    weekdays.forEach { dayItem ->
-                        val isSelected = dayItem.dayIndex == selectedWeekday
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(64.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) LimeGreen else SurfaceDark)
-                                .border(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) LimeGreen else if (dayItem.isToday) LimeGreen.copy(alpha = 0.5f) else StrokeDark,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { onSelectWeekday(dayItem.dayIndex) }
-                                .padding(vertical = 6.dp),
-                            contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Create or Generate Split", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 15.sp)
+                            Text("Build multiple custom splits & routines", color = TextMutedDark, fontSize = 12.sp)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Button(
+                            onClick = { navController.navigate(Screen.CreatePlan.route) },
+                            colors = ButtonDefaults.buttonColors(containerColor = LimeGreen, contentColor = Color(0xFF121212)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(38.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = dayItem.shortName,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Color(0xFF121212) else TextMutedDark
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "${dayItem.dayNumberInMonth}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (isSelected) Color(0xFF121212) else OffWhite
-                                )
-                                if (dayItem.isToday) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) Color(0xFF121212) else LimeGreen)
-                                    )
-                                }
-                            }
+                            Text("+ New Plan", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
             }
 
-            // Current Scheduled Day View
-            if (isGenerating) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = LimeGreen)
-                    }
-                }
-            } else if (selectedRoutine != null) {
-                if (selectedRoutine.isRestDay || selectedRoutine.exercises.isEmpty()) {
-                    // Active Rest Card
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, StrokeDark, RoundedCornerShape(16.dp))
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .clip(CircleShape)
-                                        .background(LimeTintDark),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.SelfImprovement,
-                                        contentDescription = null,
-                                        tint = LimeGreen,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                Text(
-                                    text = "Active Recovery & Rest Day",
-                                    fontWeight = FontWeight.Black,
-                                    color = OffWhite,
-                                    fontSize = 18.sp
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = "Your muscles grow and repair during rest. Focus on hitting your daily protein target, light walking (7,000+ steps), and 8 hours of sleep.",
-                                    color = TextMutedDark,
-                                    fontSize = 13.sp,
-                                    lineHeight = 18.sp
-                                )
+            // Search Bar
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text("Search plans or exercises...", color = TextMutedDark) },
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = TextMutedDark) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextMutedDark)
                             }
                         }
-                    }
-                } else {
-                    // Workout Header Card
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(2.dp, LimeGreen, RoundedCornerShape(16.dp))
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Badge(containerColor = LimeGreen) {
-                                        Text(
-                                            text = selectedRoutine.splitCategory.uppercase(),
-                                            color = Color(0xFF121212),
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 11.sp,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                        )
-                                    }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LimeGreen,
+                        unfocusedBorderColor = StrokeDark,
+                        focusedContainerColor = SurfaceDark,
+                        unfocusedContainerColor = SurfaceDark,
+                        focusedTextColor = OffWhite,
+                        unfocusedTextColor = OffWhite
+                    ),
+                    singleLine = true
+                )
+            }
 
-                                    Text(
-                                        text = "~${selectedRoutine.estimatedDurationMinutes} mins • ${selectedRoutine.exercises.size} Exercises",
-                                        color = LimeDeepDark,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Text(
-                                    text = selectedRoutine.dayName,
-                                    fontWeight = FontWeight.Black,
-                                    color = OffWhite,
-                                    fontSize = 18.sp
-                                )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = "Focus: ${selectedRoutine.targetFocus}",
-                                    color = TextMutedDark,
-                                    fontSize = 12.sp
-                                )
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                Button(
-                                    onClick = { onStartWorkout(selectedRoutine) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = LimeGreen,
-                                        contentColor = Color(0xFF121212)
-                                    ),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Start Today's Workout 🚀", fontWeight = FontWeight.Black, fontSize = 15.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Scheduled Exercises Header
-                    item {
-                        Text(
-                            text = "Today's Exercise Routine",
-                            fontWeight = FontWeight.Bold,
-                            color = OffWhite,
-                            fontSize = 16.sp
+            // Split Type Filter Chips
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(SplitType.values()) { split ->
+                        val isSel = selectedSplit == split
+                        FilterChip(
+                            selected = isSel,
+                            onClick = { viewModel.onSplitSelected(split) },
+                            label = { Text(split.displayName, fontSize = 12.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = LimeGreen,
+                                selectedLabelColor = Color(0xFF121212),
+                                containerColor = SurfaceDark,
+                                labelColor = OffWhite
+                            ),
+                            shape = RoundedCornerShape(8.dp)
                         )
                     }
-
-                    // Scheduled Exercise Cards
-                    items(selectedRoutine.exercises) { ex ->
-                        ExerciseScheduleCard(exercise = ex)
-                    }
                 }
-            } else {
+            }
+
+            // Workout Plans List
+            if (filteredWorkouts.isEmpty()) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp),
+                            modifier = Modifier.padding(28.dp).fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("No routine generated yet", fontWeight = FontWeight.Bold, color = OffWhite)
+                            Icon(Icons.Filled.FitnessCenter, contentDescription = null, tint = TextMutedDark, modifier = Modifier.size(40.dp))
                             Spacer(Modifier.height(12.dp))
-                            Button(
-                                onClick = onConfigurePlan,
-                                colors = ButtonDefaults.buttonColors(containerColor = LimeGreen, contentColor = Color(0xFF121212))
-                            ) {
-                                Text("Generate Routine ⚡", fontWeight = FontWeight.Bold)
+                            Text("No workout plans found", fontWeight = FontWeight.Bold, color = OffWhite, fontSize = 16.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Create a custom plan or generate an AI split", color = TextMutedDark, fontSize = 12.sp)
+                            Spacer(Modifier.height(18.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(
+                                    onClick = { navController.navigate(Screen.CreatePlan.route) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = LimeGreen, contentColor = Color(0xFF121212)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("+ Create Plan", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                                OutlinedButton(
+                                    onClick = { navController.navigate(Screen.PlanGenerator.route) },
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, LimeGreen),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("⚡ AI Split", color = LimeGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
                             }
                         }
                     }
                 }
+            } else {
+                items(filteredWorkouts) { workout ->
+                    SavedWorkoutCard(
+                        workout = workout,
+                        onClick = {
+                            workout.id?.let { wid ->
+                                navController.navigate(Screen.WorkoutDetail.createRoute(wid))
+                            }
+                        }
+                    )
+                }
             }
 
             item {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
 }
 
 @Composable
-fun ExerciseScheduleCard(exercise: GeneratedExercise) {
-    var expanded by remember { mutableStateOf(false) }
+fun SavedWorkoutCard(
+    workout: Workout,
+    onClick: () -> Unit
+) {
+    val durationStr = "${maxOf(30, workout.exercises.size * 8)} mins"
 
     Card(
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        shape = RoundedCornerShape(14.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, StrokeDark, RoundedCornerShape(14.dp))
+            .border(1.dp, StrokeDark, RoundedCornerShape(16.dp))
+            .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                val fullGifUrl = remember(exercise.gifUrl, exercise.name) {
-                    val rawUrl = if (exercise.gifUrl.isNotBlank()) {
-                        exercise.gifUrl
-                    } else {
-                        com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase.resolveExerciseGif(exercise.name)
-                    }
-                    if (rawUrl.startsWith("/")) {
-                        "https://pulse-backend-6srs.onrender.com$rawUrl"
-                    } else {
-                        rawUrl
-                    }
-                }
-
-                // Exercise Thumbnail or Animated GIF
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(SurfaceAltDark),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (fullGifUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = coil.request.ImageRequest.Builder(context)
-                                .data(fullGifUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = exercise.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.FitnessCenter,
-                            contentDescription = null,
-                            tint = LimeGreen,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = exercise.name,
-                        fontWeight = FontWeight.Bold,
-                        color = OffWhite,
-                        fontSize = 15.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        exercise.targetMuscles.firstOrNull()?.let { muscle ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(LimeTintDark)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = muscle.uppercase(),
-                                    color = LimeDeepDark,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        exercise.equipments.firstOrNull()?.let { eq ->
-                            Text(text = eq, color = TextMutedDark, fontSize = 11.sp)
-                        }
-                    }
-                }
-
-                if (exercise.instructions.isNotEmpty()) {
-                    IconButton(
-                        onClick = { expanded = !expanded },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = "Instructions",
-                            tint = TextMutedDark
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = StrokeDark)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Metrics row
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column {
-                        Text("SETS", color = TextMutedDark, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text("${exercise.targetSets}", color = OffWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    }
-                    Column {
-                        Text("REPS", color = TextMutedDark, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(exercise.targetReps, color = LimeGreen, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    }
-                    Column {
-                        Text("REST", color = TextMutedDark, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text("${exercise.restSeconds}s", color = OffWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    }
-                }
-
                 Text(
-                    text = "~${exercise.estimatedMinutes}m",
-                    color = TextMutedDark,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    text = workout.name,
+                    style = Typography.titleLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                    color = OffWhite,
+                    modifier = Modifier.weight(1f)
+                )
+                CategoryBadge(
+                    text = durationStr,
+                    colorTint = LimeTintDark,
+                    textColor = LimeGreen
                 )
             }
 
-            // Expandable Instruction Steps
-            AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Form & Execution:", color = LimeDeepDark, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    exercise.instructions.forEach { step ->
-                        Text("• $step", color = TextMutedDark, fontSize = 12.sp, modifier = Modifier.padding(vertical = 1.dp))
-                    }
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CategoryBadge(
+                        text = "${workout.exercises.size} Exercises",
+                        colorTint = SurfaceAltDark,
+                        textColor = OffWhite
+                    )
+                    CategoryBadge(
+                        text = workout.splitType.displayName,
+                        colorTint = SurfaceAltDark,
+                        textColor = TextMutedDark
+                    )
                 }
+
+                Text(
+                    text = "View Details ➔",
+                    color = LimeGreen,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
             }
         }
     }

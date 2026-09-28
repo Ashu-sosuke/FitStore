@@ -1,6 +1,9 @@
 import os
 import json
+import logging
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 candidate_1 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "exercisedb_v1_sample"))
 candidate_2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "exercisedb_v1_sample"))
@@ -78,7 +81,7 @@ async def seed_exercise_catalog(catalog_collection) -> int:
     exercises = dataset["exercises"]
     
     if not exercises:
-        print("[WARNING] No exercises found in local ExerciseDB directory.")
+        logger.warning("No exercises found in local ExerciseDB directory.")
         return 0
 
     count = await catalog_collection.count_documents({})
@@ -91,8 +94,8 @@ async def seed_exercise_catalog(catalog_collection) -> int:
         
         # Insert exercises
         await catalog_collection.insert_many(exercises)
-        print(f"[OK] Seeded {len(exercises)} exercises into MongoDB exercises_catalog.")
+        logger.info(f"Seeded {len(exercises)} exercises into MongoDB exercises_catalog.")
         return len(exercises)
     else:
-        print(f"[INFO] exercises_catalog already contains {count} records.")
+        logger.info(f"exercises_catalog already contains {count} records.")
         return count

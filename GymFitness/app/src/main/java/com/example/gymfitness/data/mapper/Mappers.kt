@@ -22,7 +22,24 @@ fun UserEntity.toDomain(): UserProfile {
         currentStreak = currentStreak,
         highestStreak = highestStreak,
         friendCode = friendCode,
-        showOnLeaderboards = showOnLeaderboards
+        showOnLeaderboards = showOnLeaderboards,
+        dailyStepTarget = dailyStepTarget,
+        goalPriority = goalPriority,
+        trainingHistory = trainingHistory,
+        currentRoutine = currentRoutine,
+        trainingLocation = trainingLocation,
+        warmupIncluded = warmupIncluded,
+        sessionDurationMinutes = sessionDurationMinutes,
+        daysPerWeekAvailable = daysPerWeek,
+        trainingStyle = trainingStyle,
+        intensityPreference = intensityPreference,
+        sleepHours = sleepHours,
+        stressLevel = stressLevel,
+        dietPreference = dietPreference,
+        mealFrequency = mealFrequency,
+        nutritionPriority = nutritionPriority,
+        planAdaptability = planAdaptability,
+        progressionModel = progressionModel
     )
 }
 
@@ -44,7 +61,24 @@ fun UserProfile.toEntity(): UserEntity {
         currentStreak = currentStreak,
         highestStreak = highestStreak,
         friendCode = friendCode,
-        showOnLeaderboards = showOnLeaderboards
+        showOnLeaderboards = showOnLeaderboards,
+        dailyStepTarget = dailyStepTarget,
+        goalPriority = goalPriority,
+        trainingHistory = trainingHistory,
+        currentRoutine = currentRoutine,
+        trainingLocation = trainingLocation,
+        warmupIncluded = warmupIncluded,
+        sessionDurationMinutes = sessionDurationMinutes,
+        daysPerWeek = daysPerWeekAvailable,
+        trainingStyle = trainingStyle,
+        intensityPreference = intensityPreference,
+        sleepHours = sleepHours,
+        stressLevel = stressLevel,
+        dietPreference = dietPreference,
+        mealFrequency = mealFrequency,
+        nutritionPriority = nutritionPriority,
+        planAdaptability = planAdaptability,
+        progressionModel = progressionModel
     )
 }
 
@@ -65,7 +99,29 @@ fun ProfileDto.toDomain(): UserProfile {
         currentStreak = 0,
         highestStreak = 0,
         friendCode = friendCode,
-        showOnLeaderboards = showOnLeaderboards
+        showOnLeaderboards = showOnLeaderboards,
+        dailyStepTarget = dailyStepTarget ?: 10000,
+        goalPriority = goalPriority ?: "balanced",
+        trainingHistory = trainingHistory ?: "just_starting",
+        currentRoutine = currentRoutine ?: "no_routine",
+        trainingLocation = trainingLocation ?: "commercial_gym",
+        warmupIncluded = warmupIncluded ?: true,
+        sessionDurationMinutes = sessionDurationMinutes ?: 60,
+        daysPerWeekAvailable = daysPerWeek ?: 4,
+        focusMuscles = focusMuscles ?: emptyList(),
+        avoidMuscles = avoidMuscles ?: emptyList(),
+        preferredExercises = preferredExercises ?: emptyList(),
+        dislikedExercises = dislikedExercises ?: emptyList(),
+        physicalLimitations = physicalLimitations ?: emptyList(),
+        trainingStyle = trainingStyle ?: "bodybuilding",
+        intensityPreference = intensityPreference ?: "moderate",
+        sleepHours = sleepHours ?: "7_8h",
+        stressLevel = stressLevel ?: "moderate",
+        dietPreference = dietPreference ?: "non_veg",
+        mealFrequency = mealFrequency ?: 3,
+        nutritionPriority = nutritionPriority ?: "high_protein",
+        planAdaptability = planAdaptability ?: "hybrid",
+        progressionModel = progressionModel ?: "progressive_overload"
     )
 }
 
@@ -84,7 +140,29 @@ fun UserProfile.toDto(): ProfileCreateDto {
         carbsTarget = carbsTarget,
         fatsTarget = fatsTarget,
         friendCode = friendCode,
-        showOnLeaderboards = showOnLeaderboards
+        showOnLeaderboards = showOnLeaderboards,
+        dailyStepTarget = dailyStepTarget,
+        goalPriority = goalPriority,
+        trainingHistory = trainingHistory,
+        currentRoutine = currentRoutine,
+        trainingLocation = trainingLocation,
+        warmupIncluded = warmupIncluded,
+        sessionDurationMinutes = sessionDurationMinutes,
+        daysPerWeek = daysPerWeekAvailable,
+        focusMuscles = focusMuscles,
+        avoidMuscles = avoidMuscles,
+        preferredExercises = preferredExercises,
+        dislikedExercises = dislikedExercises,
+        physicalLimitations = physicalLimitations,
+        trainingStyle = trainingStyle,
+        intensityPreference = intensityPreference,
+        sleepHours = sleepHours,
+        stressLevel = stressLevel,
+        dietPreference = dietPreference,
+        mealFrequency = mealFrequency,
+        nutritionPriority = nutritionPriority,
+        planAdaptability = planAdaptability,
+        progressionModel = progressionModel
     )
 }
 

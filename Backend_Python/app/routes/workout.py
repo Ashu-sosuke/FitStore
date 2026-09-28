@@ -14,8 +14,9 @@ from app.database import (
 from app.services.workout_generator import generate_personalized_workout_plan
 from app.services.dataset_loader import seed_exercise_catalog, get_cached_exercises
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
+import re
 
 router = APIRouter()
 
@@ -35,11 +36,23 @@ async def generate_plan(request: PlanGenerationRequest = Body(...)):
             session_duration_minutes=request.sessionDurationMinutes,
             experience_level=request.experienceLevel,
             available_equipment=request.availableEquipment,
-            focus_muscles=request.focusMuscles
+            goal_priority=request.goalPriority,
+            focus_muscles=request.focusMuscles,
+            avoid_muscles=request.avoidMuscles,
+            preferred_exercises=request.preferredExercises,
+            disliked_exercises=request.dislikedExercises,
+            physical_limitations=request.physicalLimitations,
+            training_style=request.trainingStyle,
+            intensity_preference=request.intensityPreference,
+            sleep_hours=request.sleepHours,
+            stress_level=request.stressLevel,
+            training_location=request.trainingLocation,
+            warmup_included=request.warmupIncluded,
+            progression_model=request.progressionModel
         )
         return plan
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Plan generation failed. Please try again.")
 
 
 @router.post("/adopt-plan", response_description="Adopt and schedule a generated workout plan")
@@ -55,7 +68,7 @@ async def adopt_plan(request: AdoptWorkoutPlanRequest = Body(...)):
         {
             "$set": {
                 "activeSplit": request.plan.title,
-                "updatedAt": datetime.utcnow()
+                "updatedAt": datetime.now(timezone.utc)
             }
         }
     )
@@ -89,9 +102,9 @@ async def adopt_plan(request: AdoptWorkoutPlanRequest = Body(...)):
             "workoutName": routine.dayName,
             "exercises": workout_exercises,
             "totalVolume": 0.0,
-            "date": datetime.utcnow(),
-            "createdAt": datetime.utcnow(),
-            "updatedAt": datetime.utcnow()
+            "date": datetime.now(timezone.utc),
+            "createdAt": datetime.now(timezone.utc),
+            "updatedAt": datetime.now(timezone.utc)
         }
         res = await workouts_collection.insert_one(workout_doc)
         created_ids.append(str(res.inserted_id))
@@ -115,7 +128,7 @@ async def get_exercise_catalog(
     """Retrieves exercises from catalog with optional filters."""
     query = {}
     if search:
-        query["name"] = {"$regex": search, "$options": "i"}
+        query["name"] = {"$regex": re.escape(search), "$options": "i"}
     if body_part:
         query["bodyParts"] = {"$in": [body_part.lower()]}
     if target_muscle:
@@ -168,8 +181,8 @@ async def create_workout(workout: WorkoutCreate = Body(...)):
 
     new_workout = workout.dict()
     new_workout["totalVolume"] = sum(ex["sets"] * ex["reps"] * ex["weight"] for ex in new_workout["exercises"])
-    new_workout["createdAt"] = datetime.utcnow()
-    new_workout["updatedAt"] = datetime.utcnow()
+    new_workout["createdAt"] = datetime.now(timezone.utc)
+    new_workout["updatedAt"] = datetime.now(timezone.utc)
     
     result = await workouts_collection.insert_one(new_workout)
     created_workout = await workouts_collection.find_one({"_id": result.inserted_id})

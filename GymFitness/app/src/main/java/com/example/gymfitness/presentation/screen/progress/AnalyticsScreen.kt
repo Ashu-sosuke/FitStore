@@ -243,7 +243,7 @@ fun AnalyticsScreen(
                     Column {
                         Text("HEART RATE", style = Typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = TextMutedDark)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("138", style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = OffWhite)
+                            Text("${state.heartRatePeak}", style = Typography.displayLarge.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = OffWhite)
                             Text("bpm peak", style = Typography.bodySmall, color = TextMutedDark)
                         }
                     }
@@ -258,7 +258,7 @@ fun AnalyticsScreen(
                     }
                 }
                 Spacer(Modifier.height(24.dp))
-                HeartRateLineChart(heartRateData = listOf(65, 82, 110, 95, 120, 85, 90, 138, 72, 80))
+                HeartRateLineChart(heartRateData = state.heartRateSamples)
             }
 
             Spacer(Modifier.height(48.dp))

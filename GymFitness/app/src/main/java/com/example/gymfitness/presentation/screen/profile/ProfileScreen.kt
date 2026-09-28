@@ -204,14 +204,67 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            // Daily Step Goal Card
+            BaseCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Daily Step Goal", style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = OffWhite)
+                        Surface(color = LimeTintDark, shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                text = "${String.format(java.util.Locale.getDefault(), "%,d", viewModel.dailyStepTarget)} steps",
+                                style = Typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                                color = LimeGreen,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("Calibrates your Home dashboard progress ring & energy expenditure.", color = TextMutedDark, fontSize = 12.sp)
+                    Spacer(Modifier.height(14.dp))
+
+                    val stepPresets = listOf(6000, 8000, 10000, 12000, 15000)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        stepPresets.forEach { preset ->
+                            val isSel = viewModel.dailyStepTarget == preset
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) LimeGreen else SurfaceDark)
+                                    .border(1.dp, if (isSel) LimeGreen else StrokeDark, RoundedCornerShape(8.dp))
+                                    .clickable { viewModel.updateStepTarget(preset) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${preset / 1000}k",
+                                    color = if (isSel) Color(0xFF121212) else OffWhite,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             // Fitness Strategy Card
             BaseCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Text("Fitness Strategy", style = Typography.titleLarge, color = InkBlack)
+                    Text("Fitness Strategy", style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = OffWhite)
                     Spacer(Modifier.height(16.dp))
 
                     // Goal Choice
-                    Text("Goal", style = Typography.labelSmall, color = TextMuted)
+                    Text("Goal", style = Typography.labelSmall, color = TextMutedDark)
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("Lose Weight", "Gain Muscle", "Maintain").forEach { goalOption ->
@@ -221,8 +274,8 @@ fun ProfileScreen(
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) SunsetOrange else SurfaceAlt)
-                                    .border(1.dp, if (isSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) LimeGreen else SurfaceDark)
+                                    .border(1.dp, if (isSelected) LimeGreen else StrokeDark, RoundedCornerShape(12.dp))
                                     .clickable { viewModel.goal = goalOption },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -232,7 +285,7 @@ fun ProfileScreen(
                                         "Gain Muscle" -> "Gain"
                                         else -> "Maintain"
                                     },
-                                    color = if (isSelected) Color.White else TextMuted,
+                                    color = if (isSelected) Color(0xFF121212) else OffWhite,
                                     style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
@@ -242,7 +295,7 @@ fun ProfileScreen(
                     Spacer(Modifier.height(16.dp))
 
                     // Activity Level Choice
-                    Text("Activity Level", style = Typography.labelSmall, color = TextMuted)
+                    Text("Activity Level", style = Typography.labelSmall, color = TextMutedDark)
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth().height(40.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf("Sedentary", "Light", "Moderate", "Very", "Extra").forEach { level ->
@@ -252,14 +305,14 @@ fun ProfileScreen(
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) SunsetOrange else SurfaceAlt)
-                                    .border(1.dp, if (isSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) LimeGreen else SurfaceDark)
+                                    .border(1.dp, if (isSelected) LimeGreen else StrokeDark, RoundedCornerShape(8.dp))
                                     .clickable { viewModel.activityLevel = level },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = level,
-                                    color = if (isSelected) Color.White else TextMuted,
+                                    color = if (isSelected) Color(0xFF121212) else OffWhite,
                                     style = Typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 )
                             }

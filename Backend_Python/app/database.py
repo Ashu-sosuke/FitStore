@@ -1,9 +1,12 @@
 import os
+import logging
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "fitness-tracker")
@@ -15,12 +18,11 @@ client_kwargs = {
 }
 
 if "mongodb+srv" in MONGO_URI:
-    # Cloud settings (MongoDB Atlas)
+    # Cloud settings (MongoDB Atlas) — enforce proper TLS verification
     client_kwargs["tls"] = True
     client_kwargs["tlsCAFile"] = certifi.where()
-    client_kwargs["tlsAllowInvalidCertificates"] = True
 else:
-    # Local settings
+    # Local development — skip TLS verification
     client_kwargs["tlsAllowInvalidCertificates"] = True
 
 client = AsyncIOMotorClient(MONGO_URI, **client_kwargs)
@@ -36,6 +38,6 @@ exercises_catalog_collection = db.get_collection("exercises_catalog")
 async def ping_db():
     try:
         await client.admin.command('ping')
-        print(f"[OK] Connected to MongoDB: {'Cloud' if 'mongodb+srv' in MONGO_URI else 'Local'}")
+        logger.info(f"Connected to MongoDB: {'Cloud' if 'mongodb+srv' in MONGO_URI else 'Local'}")
     except Exception as e:
-        print(f"[ERROR] MongoDB connection failed: {e}")
+        logger.error(f"MongoDB connection failed: {e}")

@@ -2,6 +2,7 @@ package com.example.gymfitness.data.repository
 
 import com.example.gymfitness.data.local.dao.UserDao
 import com.example.gymfitness.data.local.entity.UserEntity
+import com.example.gymfitness.data.mapper.toDto
 import com.example.gymfitness.data.remote.api.ProfileApiService
 import com.example.gymfitness.data.remote.dto.ProfileDto
 import com.example.gymfitness.data.sync.SyncManager
@@ -89,7 +90,20 @@ class UserRepositoryImplTest {
     }
 
     @Test
-    fun `saveProfile saves locally and triggers sync`() = runTest {
+    fun `saveProfile saves locally and syncs to remote when online`() = runTest {
+        coEvery { profileApi.createProfile(any()) } returns testDto
+
+        repository.saveProfile(testProfile)
+
+        coVerify { userDao.insertUser(any()) }
+        coVerify { profileApi.createProfile(any()) }
+    }
+
+    @Test
+    fun `saveProfile schedules background sync when network fails`() = runTest {
+        coEvery { profileApi.createProfile(any()) } throws RuntimeException("Network error")
+        coEvery { profileApi.updateProfile(any(), any()) } throws RuntimeException("Network error")
+
         repository.saveProfile(testProfile)
 
         coVerify { userDao.insertUser(any()) }

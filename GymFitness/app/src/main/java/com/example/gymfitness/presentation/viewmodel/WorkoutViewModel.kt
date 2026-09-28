@@ -1,7 +1,6 @@
 package com.example.gymfitness.presentation.viewmodel
 
 import android.content.Context
-import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.Data
@@ -17,13 +16,7 @@ import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -130,8 +123,8 @@ class WorkoutViewModel @Inject constructor(
                 if (profile != null) {
                     val userLoggedCount = _workouts.value.size
                     val recommendation = splitRecommender.computeRecommendation(
-                        experienceLevel = profile.experienceLevel ?: "BEGINNER",
-                        daysPerWeek = profile.daysPerWeekAvailable ?: 5,
+                        experienceLevel = profile.experienceLevel,
+                        daysPerWeek = profile.daysPerWeekAvailable,
                         userLoggedWorkoutCount = userLoggedCount
                     )
                     _recommendedSplit.value = recommendation
@@ -147,10 +140,21 @@ class WorkoutViewModel @Inject constructor(
                             age = profile.age,
                             gender = profile.gender,
                             goal = planGoal,
-                            daysPerWeek = profile.daysPerWeekAvailable ?: 5,
-                            sessionDurationMinutes = 60,
-                            experienceLevel = profile.experienceLevel ?: "beginner",
-                            equipment = listOf("barbell", "dumbbell", "cable", "sled machine", "body weight")
+                            daysPerWeek = profile.daysPerWeekAvailable,
+                            sessionDurationMinutes = profile.sessionDurationMinutes,
+                            experienceLevel = profile.experienceLevel,
+                            equipment = listOf("barbell", "dumbbell", "cable", "sled machine", "body weight"),
+                            goalPriority = profile.goalPriority,
+                            focusMuscles = profile.focusMuscles,
+                            avoidMuscles = profile.avoidMuscles,
+                            physicalLimitations = profile.physicalLimitations,
+                            trainingStyle = profile.trainingStyle,
+                            intensityPreference = profile.intensityPreference,
+                            sleepHours = profile.sleepHours,
+                            stressLevel = profile.stressLevel,
+                            trainingLocation = profile.trainingLocation,
+                            warmupIncluded = profile.warmupIncluded,
+                            progressionModel = profile.progressionModel
                         )
                     }
                 }
@@ -240,6 +244,236 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 
+    fun createCustomWorkout(
+        name: String,
+        targetArea: String = "Chest & Triceps",
+        intensity: String = "Moderate",
+        duration: String = "45 mins",
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val defaultExercises = when {
+                targetArea.contains("Chest", ignoreCase = true) || targetArea.contains("Tricep", ignoreCase = true) -> listOf(
+                    Exercise("Flat Barbell Bench Press", 4, 10, 60.0, MuscleGroup.CHEST),
+                    Exercise("Incline Dumbbell Press", 3, 12, 22.0, MuscleGroup.CHEST),
+                    Exercise("Cable Chest Fly", 3, 15, 15.0, MuscleGroup.CHEST),
+                    Exercise("Rope Tricep Pushdown", 4, 12, 20.0, MuscleGroup.TRICEPS),
+                    Exercise("Overhead Dumbbell Extension", 3, 12, 18.0, MuscleGroup.TRICEPS)
+                )
+                targetArea.contains("Back", ignoreCase = true) || targetArea.contains("Bicep", ignoreCase = true) -> listOf(
+                    Exercise("Barbell Deadlift", 4, 8, 80.0, MuscleGroup.BACK),
+                    Exercise("Lat Pulldown", 4, 10, 50.0, MuscleGroup.BACK),
+                    Exercise("Seated Cable Row", 3, 12, 45.0, MuscleGroup.BACK),
+                    Exercise("Barbell Bicep Curl", 4, 10, 25.0, MuscleGroup.BICEPS),
+                    Exercise("Hammer Curls", 3, 12, 14.0, MuscleGroup.BICEPS)
+                )
+                targetArea.contains("Leg", ignoreCase = true) || targetArea.contains("Quad", ignoreCase = true) -> listOf(
+                    Exercise("Barbell Back Squat", 4, 8, 70.0, MuscleGroup.QUADS),
+                    Exercise("Romanian Deadlift", 3, 10, 60.0, MuscleGroup.HAMSTRINGS),
+                    Exercise("Leg Press Machine", 3, 12, 120.0, MuscleGroup.QUADS),
+                    Exercise("Lying Leg Curl", 3, 12, 35.0, MuscleGroup.HAMSTRINGS),
+                    Exercise("Standing Calf Raise", 4, 15, 40.0, MuscleGroup.CALVES)
+                )
+                targetArea.contains("Shoulder", ignoreCase = true) -> listOf(
+                    Exercise("Overhead Barbell Press", 4, 8, 40.0, MuscleGroup.SHOULDERS),
+                    Exercise("Dumbbell Lateral Raise", 4, 15, 10.0, MuscleGroup.SHOULDERS),
+                    Exercise("Rear Delt Reverse Fly", 3, 15, 8.0, MuscleGroup.SHOULDERS),
+                    Exercise("Face Pulls", 3, 15, 20.0, MuscleGroup.SHOULDERS)
+                )
+                else -> listOf(
+                    Exercise("Push-ups", 3, 15, 0.0, MuscleGroup.CHEST),
+                    Exercise("Pull-ups / Inverted Row", 3, 10, 0.0, MuscleGroup.BACK),
+                    Exercise("Bodyweight Squats", 3, 20, 0.0, MuscleGroup.QUADS),
+                    Exercise("Dumbbell Shoulder Press", 3, 12, 12.0, MuscleGroup.SHOULDERS),
+                    Exercise("Plank Hold", 3, 60, 0.0, MuscleGroup.ABS_CORE)
+                )
+            }
+
+            val splitType = when {
+                name.contains("Push", ignoreCase = true) -> SplitType.PUSH
+                name.contains("Pull", ignoreCase = true) -> SplitType.PULL
+                name.contains("Leg", ignoreCase = true) -> SplitType.LEGS
+                name.contains("Upper", ignoreCase = true) -> SplitType.UPPER
+                name.contains("Lower", ignoreCase = true) -> SplitType.LOWER
+                name.contains("Cardio", ignoreCase = true) -> SplitType.CARDIO
+                else -> SplitType.FULL_BODY
+            }
+
+            val newWorkout = Workout(
+                id = null,
+                deviceId = deviceId,
+                name = name.ifBlank { "Custom Plan - $targetArea" },
+                exercises = defaultExercises,
+                totalVolume = defaultExercises.sumOf { it.sets * it.reps * it.weight },
+                date = System.currentTimeMillis().toString(),
+                splitType = splitType
+            )
+
+            saveWorkout(newWorkout)
+            fetchWorkouts(deviceId)
+            onSuccess()
+        }
+    }
+
+    fun createMultiDaySplitProgram(
+        programName: String,
+        splitTemplate: String,
+        durationWeeks: String,
+        intensity: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val baseTitle = programName.ifBlank { "$splitTemplate ($durationWeeks)" }
+
+            val dailyPlans: List<Pair<String, List<Exercise>>> = when {
+                splitTemplate.contains("Bro", ignoreCase = true) || splitTemplate.contains("5", ignoreCase = true) -> listOf(
+                    "Day 1: Chest Power" to listOf(
+                        Exercise("Flat Barbell Bench Press", 4, 10, 60.0, MuscleGroup.CHEST),
+                        Exercise("Incline Dumbbell Press", 3, 12, 24.0, MuscleGroup.CHEST),
+                        Exercise("Cable Chest Fly", 3, 15, 15.0, MuscleGroup.CHEST),
+                        Exercise("Dips (Chest Focus)", 3, 12, 0.0, MuscleGroup.CHEST)
+                    ),
+                    "Day 2: Back Density & Lats" to listOf(
+                        Exercise("Barbell Conventional Deadlift", 4, 8, 80.0, MuscleGroup.BACK),
+                        Exercise("Lat Pulldown (Wide Grip)", 4, 10, 55.0, MuscleGroup.BACK),
+                        Exercise("Seated Cable Row", 3, 12, 50.0, MuscleGroup.BACK),
+                        Exercise("Bent Over Barbell Row", 3, 10, 45.0, MuscleGroup.BACK)
+                    ),
+                    "Day 3: Shoulders & Delts" to listOf(
+                        Exercise("Overhead Barbell Military Press", 4, 8, 40.0, MuscleGroup.SHOULDERS),
+                        Exercise("Dumbbell Lateral Raise", 4, 15, 10.0, MuscleGroup.SHOULDERS),
+                        Exercise("Rear Delt Reverse Fly", 3, 15, 8.0, MuscleGroup.SHOULDERS),
+                        Exercise("Cable Face Pulls", 3, 15, 20.0, MuscleGroup.SHOULDERS)
+                    ),
+                    "Day 4: Arms (Biceps & Triceps)" to listOf(
+                        Exercise("Barbell Bicep Curl", 4, 10, 25.0, MuscleGroup.BICEPS),
+                        Exercise("Incline Dumbbell Curl", 3, 12, 12.0, MuscleGroup.BICEPS),
+                        Exercise("Rope Tricep Pushdown", 4, 12, 22.0, MuscleGroup.TRICEPS),
+                        Exercise("Overhead EZ-Bar Skullcrushers", 3, 12, 20.0, MuscleGroup.TRICEPS)
+                    ),
+                    "Day 5: Legs & Core" to listOf(
+                        Exercise("Barbell Back Squat", 4, 8, 75.0, MuscleGroup.QUADS),
+                        Exercise("Romanian Deadlift", 3, 10, 65.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Leg Press Machine", 3, 12, 130.0, MuscleGroup.QUADS),
+                        Exercise("Standing Calf Raise", 4, 15, 40.0, MuscleGroup.CALVES),
+                        Exercise("Hanging Knee / Leg Raise", 3, 15, 0.0, MuscleGroup.ABS_CORE)
+                    )
+                )
+                splitTemplate.contains("Push", ignoreCase = true) || splitTemplate.contains("PPL", ignoreCase = true) -> listOf(
+                    "Day 1: Push (Chest, Delts & Triceps)" to listOf(
+                        Exercise("Barbell Bench Press", 4, 8, 65.0, MuscleGroup.CHEST),
+                        Exercise("Incline Dumbbell Press", 3, 10, 22.0, MuscleGroup.CHEST),
+                        Exercise("Standing Overhead Press", 3, 10, 35.0, MuscleGroup.SHOULDERS),
+                        Exercise("Dumbbell Lateral Raise", 4, 15, 10.0, MuscleGroup.SHOULDERS),
+                        Exercise("Tricep Rope Pushdown", 3, 12, 20.0, MuscleGroup.TRICEPS)
+                    ),
+                    "Day 2: Pull (Back, Biceps & Rear Delts)" to listOf(
+                        Exercise("Barbell Deadlift", 4, 6, 85.0, MuscleGroup.BACK),
+                        Exercise("Lat Pulldown", 4, 10, 50.0, MuscleGroup.BACK),
+                        Exercise("Chest-Supported Row", 3, 12, 40.0, MuscleGroup.BACK),
+                        Exercise("Cable Face Pulls", 3, 15, 20.0, MuscleGroup.SHOULDERS),
+                        Exercise("Barbell Bicep Curl", 4, 10, 25.0, MuscleGroup.BICEPS)
+                    ),
+                    "Day 3: Legs, Calves & Abs" to listOf(
+                        Exercise("Barbell Back Squat", 4, 8, 75.0, MuscleGroup.QUADS),
+                        Exercise("Romanian Deadlift", 3, 10, 60.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Leg Extensions", 3, 15, 40.0, MuscleGroup.QUADS),
+                        Exercise("Lying Leg Curls", 3, 12, 35.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Standing Calf Raise", 4, 15, 45.0, MuscleGroup.CALVES),
+                        Exercise("Cable Woodchopper / Plank", 3, 45, 0.0, MuscleGroup.ABS_CORE)
+                    )
+                )
+                splitTemplate.contains("Upper", ignoreCase = true) -> listOf(
+                    "Day 1: Upper Body Power" to listOf(
+                        Exercise("Barbell Bench Press", 4, 8, 65.0, MuscleGroup.CHEST),
+                        Exercise("Bent Over Barbell Row", 4, 8, 55.0, MuscleGroup.BACK),
+                        Exercise("Overhead Dumbbell Press", 3, 10, 18.0, MuscleGroup.SHOULDERS),
+                        Exercise("Barbell Bicep Curl", 3, 10, 25.0, MuscleGroup.BICEPS),
+                        Exercise("Skullcrushers", 3, 10, 20.0, MuscleGroup.TRICEPS)
+                    ),
+                    "Day 2: Lower Body Power" to listOf(
+                        Exercise("Barbell Back Squat", 4, 8, 80.0, MuscleGroup.QUADS),
+                        Exercise("Romanian Deadlift", 4, 8, 70.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Leg Press Machine", 3, 12, 140.0, MuscleGroup.QUADS),
+                        Exercise("Standing Calf Raise", 4, 15, 45.0, MuscleGroup.CALVES),
+                        Exercise("Hanging Leg Raise", 3, 15, 0.0, MuscleGroup.ABS_CORE)
+                    ),
+                    "Day 3: Upper Body Hypertrophy" to listOf(
+                        Exercise("Incline Dumbbell Press", 4, 12, 22.0, MuscleGroup.CHEST),
+                        Exercise("Lat Pulldown (Close Grip)", 4, 12, 50.0, MuscleGroup.BACK),
+                        Exercise("Cable Lateral Raise", 4, 15, 8.0, MuscleGroup.SHOULDERS),
+                        Exercise("Incline Dumbbell Curl", 3, 12, 12.0, MuscleGroup.BICEPS),
+                        Exercise("Tricep Pushdown", 3, 12, 20.0, MuscleGroup.TRICEPS)
+                    ),
+                    "Day 4: Lower Body Hypertrophy & Abs" to listOf(
+                        Exercise("Front Squats / Leg Press", 4, 10, 60.0, MuscleGroup.QUADS),
+                        Exercise("Lying Leg Curls", 4, 12, 40.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Walking Dumbbell Lunges", 3, 12, 14.0, MuscleGroup.GLUTES),
+                        Exercise("Seated Calf Raise", 4, 15, 35.0, MuscleGroup.CALVES),
+                        Exercise("Abdominal Crunches", 3, 20, 0.0, MuscleGroup.ABS_CORE)
+                    )
+                )
+                else -> listOf(
+                    "Day 1: Full Body A (Push & Quad Focus)" to listOf(
+                        Exercise("Barbell Bench Press", 4, 8, 60.0, MuscleGroup.CHEST),
+                        Exercise("Barbell Squat", 4, 8, 70.0, MuscleGroup.QUADS),
+                        Exercise("Lat Pulldown", 3, 10, 50.0, MuscleGroup.BACK),
+                        Exercise("Dumbbell Shoulder Press", 3, 10, 16.0, MuscleGroup.SHOULDERS),
+                        Exercise("Plank Hold", 3, 60, 0.0, MuscleGroup.ABS_CORE)
+                    ),
+                    "Day 2: Full Body B (Pull & Hamstring Focus)" to listOf(
+                        Exercise("Barbell Deadlift", 4, 6, 80.0, MuscleGroup.BACK),
+                        Exercise("Incline Dumbbell Press", 3, 10, 20.0, MuscleGroup.CHEST),
+                        Exercise("Seated Cable Row", 3, 10, 45.0, MuscleGroup.BACK),
+                        Exercise("Lying Leg Curl", 3, 12, 35.0, MuscleGroup.HAMSTRINGS),
+                        Exercise("Barbell Bicep Curl", 3, 10, 22.0, MuscleGroup.BICEPS)
+                    ),
+                    "Day 3: Full Body C (Compound Density)" to listOf(
+                        Exercise("Leg Press Machine", 4, 10, 120.0, MuscleGroup.QUADS),
+                        Exercise("Dumbbell Flat Press", 3, 10, 22.0, MuscleGroup.CHEST),
+                        Exercise("Pull-ups / Chin-ups", 3, 8, 0.0, MuscleGroup.BACK),
+                        Exercise("Dumbbell Lateral Raise", 3, 15, 8.0, MuscleGroup.SHOULDERS),
+                        Exercise("Hanging Knee Raise", 3, 15, 0.0, MuscleGroup.ABS_CORE)
+                    )
+                )
+            }
+
+            for ((dayName, exercises) in dailyPlans) {
+                val totalVol = exercises.sumOf { it.sets * it.reps * it.weight }
+                val splitType = when {
+                    dayName.contains("Push", ignoreCase = true) -> SplitType.PUSH
+                    dayName.contains("Pull", ignoreCase = true) -> SplitType.PULL
+                    dayName.contains("Leg", ignoreCase = true) -> SplitType.LEGS
+                    dayName.contains("Upper", ignoreCase = true) -> SplitType.UPPER
+                    dayName.contains("Lower", ignoreCase = true) -> SplitType.LOWER
+                    else -> SplitType.FULL_BODY
+                }
+
+                val workout = Workout(
+                    id = null,
+                    deviceId = deviceId,
+                    name = "$baseTitle — $dayName",
+                    exercises = exercises,
+                    totalVolume = totalVol,
+                    date = System.currentTimeMillis().toString(),
+                    splitType = splitType
+                )
+                saveWorkout(workout)
+            }
+
+            fetchWorkouts(deviceId)
+            onSuccess()
+        }
+    }
+
+    fun deleteWorkout(workoutId: Long, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.deleteWorkoutById(workoutId)
+            fetchWorkouts(deviceId)
+            onSuccess()
+        }
+    }
+
     // --- AI Plan Generator Functions ---
     fun generateAIPlan(
         weightKg: Float,
@@ -248,10 +482,22 @@ class WorkoutViewModel @Inject constructor(
         gender: String,
         goal: String,
         daysPerWeek: Int,
-        sessionDurationMinutes: Int,
-        experienceLevel: String,
-        equipment: List<String>,
-        focusMuscles: List<String> = emptyList()
+        sessionDurationMinutes: Int = 60,
+        experienceLevel: String = "beginner",
+        equipment: List<String> = listOf("barbell", "dumbbell", "cable", "sled machine", "body weight"),
+        goalPriority: String = "balanced",
+        focusMuscles: List<String> = emptyList(),
+        avoidMuscles: List<String> = emptyList(),
+        preferredExercises: List<String> = emptyList(),
+        dislikedExercises: List<String> = emptyList(),
+        physicalLimitations: List<String> = emptyList(),
+        trainingStyle: String = "bodybuilding",
+        intensityPreference: String = "moderate",
+        sleepHours: String = "7_8h",
+        stressLevel: String = "moderate",
+        trainingLocation: String = "commercial_gym",
+        warmupIncluded: Boolean = true,
+        progressionModel: String = "progressive_overload"
     ) {
         viewModelScope.launch {
             _isGeneratingPlan.value = true
@@ -268,7 +514,19 @@ class WorkoutViewModel @Inject constructor(
                 sessionDurationMinutes = sessionDurationMinutes,
                 experienceLevel = experienceLevel,
                 availableEquipment = equipment,
-                focusMuscles = focusMuscles
+                goalPriority = goalPriority,
+                focusMuscles = focusMuscles,
+                avoidMuscles = avoidMuscles,
+                preferredExercises = preferredExercises,
+                dislikedExercises = dislikedExercises,
+                physicalLimitations = physicalLimitations,
+                trainingStyle = trainingStyle,
+                intensityPreference = intensityPreference,
+                sleepHours = sleepHours,
+                stressLevel = stressLevel,
+                trainingLocation = trainingLocation,
+                warmupIncluded = warmupIncluded,
+                progressionModel = progressionModel
             )
 
             val result = generateWorkoutPlanUseCase(prefs)
@@ -289,6 +547,18 @@ class WorkoutViewModel @Inject constructor(
             val result = repository.adoptPlan(deviceId, plan)
             _isAdoptingPlan.value = false
             if (result.isSuccess) {
+                // Update UserProfile activeSplit in local Room DB & Cloud
+                try {
+                    val currentProfile = userRepository.getProfile(deviceId)
+                    if (currentProfile != null) {
+                        val updated = currentProfile.copy(
+                            activeSplit = plan.title,
+                            daysPerWeekAvailable = plan.daysPerWeek,
+                            sessionDurationMinutes = plan.sessionDurationMinutes
+                        )
+                        userRepository.saveProfile(updated)
+                    }
+                } catch (_: Exception) {}
                 fetchWorkouts(deviceId)
                 onSuccess()
             } else {

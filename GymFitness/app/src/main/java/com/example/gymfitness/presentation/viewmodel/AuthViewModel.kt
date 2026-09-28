@@ -11,6 +11,8 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.example.gymfitness.data.remote.api.AuthApiService
+import com.example.gymfitness.data.remote.api.AuthRequestDto
 import com.example.gymfitness.data.remote.api.LeaderboardApiService
 import com.example.gymfitness.data.remote.api.UserProfileRegistration
 import com.example.gymfitness.domain.repository.UserRepository
@@ -39,6 +41,7 @@ sealed class AuthUiState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
+    private val authApi: AuthApiService,
     private val leaderboardApi: LeaderboardApiService,
     private val userRepository: UserRepository,
     private val tokenManager: TokenManager,
@@ -113,6 +116,15 @@ class AuthViewModel @Inject constructor(
                 val userId = firebaseUser.uid
                 tokenManager.saveUserId(userId)
 
+                // Obtain and persist backend JWT access token for API requests
+                try {
+                    val authResponse = authApi.getAccessToken(AuthRequestDto(deviceId = userId))
+                    tokenManager.saveToken(authResponse.access_token)
+                    Log.d("AUTH", "Backend JWT token obtained successfully")
+                } catch (e: Exception) {
+                    Log.w("AUTH", "Failed to obtain backend JWT token: ${e.localizedMessage}")
+                }
+
                 Log.d("AUTH", "Firebase Auth successful: uid=$userId, email=${firebaseUser.email}")
 
                 // Step 5: Check if this user already has a profile
@@ -163,6 +175,22 @@ class AuthViewModel @Inject constructor(
                 _uiState.value = AuthUiState.Error(
                     e.localizedMessage ?: "Sign-in failed. Please try again."
                 )
+            }
+        }
+    }
+
+    /**
+     * Initializes a backend JWT session for guest users using their device ID.
+     */
+    fun signInAsGuest() {
+        viewModelScope.launch {
+            val guestId = tokenManager.getUserId()
+            try {
+                val authResponse = authApi.getAccessToken(AuthRequestDto(deviceId = guestId))
+                tokenManager.saveToken(authResponse.access_token)
+                Log.d("AUTH", "Guest backend JWT token obtained successfully")
+            } catch (e: Exception) {
+                Log.w("AUTH", "Failed to obtain guest JWT token: ${e.localizedMessage}")
             }
         }
     }

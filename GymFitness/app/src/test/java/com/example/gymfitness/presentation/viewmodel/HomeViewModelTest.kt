@@ -10,15 +10,16 @@ import com.example.gymfitness.domain.models.WeightEntry
 import com.example.gymfitness.domain.repository.MealRepository
 import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.repository.WeightRepository
+import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.utils.HealthConnectManager
 import com.example.gymfitness.utils.MainDispatcherRule
+import com.example.gymfitness.utils.TokenManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkAll
+import io.mockk.clearAllMocks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -41,8 +42,10 @@ class HomeViewModelTest {
     private lateinit var mealRepository: MealRepository
     private lateinit var weightRepository: WeightRepository
     private lateinit var userRepository: UserRepository
+    private lateinit var workoutRepository: WorkoutRepository
     private lateinit var leaderboardRepository: LeaderboardRepository
     private lateinit var healthConnectManager: HealthConnectManager
+    private lateinit var tokenManager: TokenManager
     private lateinit var context: Context
     private lateinit var viewModel: HomeViewModel
 
@@ -59,9 +62,9 @@ class HomeViewModelTest {
         dailyCalorieTarget = 2500.0,
         proteinTarget = 150.0,
         carbsTarget = 250.0,
-        fatsTarget = 80.0,
-        currentStreak = 5,
-        highestStreak = 10
+        fatsTarget = 70.0,
+        friendCode = "TEST01",
+        currentStreak = 5
     )
 
     private val testMeals = listOf(
@@ -71,39 +74,50 @@ class HomeViewModelTest {
 
     @Before
     fun setUp() {
-        // Mock static Settings.Secure
-        mockkStatic(Settings.Secure::class)
-        every { Settings.Secure.getString(any(), any()) } returns deviceId
-
         mealRepository = mockk(relaxed = true)
         weightRepository = mockk(relaxed = true)
         userRepository = mockk(relaxed = true)
+        workoutRepository = mockk(relaxed = true)
         leaderboardRepository = mockk(relaxed = true)
         healthConnectManager = mockk(relaxed = true)
+        tokenManager = mockk(relaxed = true)
         context = mockk(relaxed = true)
+
+        every { tokenManager.getUserId() } returns deviceId
 
         // Mock repositories and manager returns
         every { userRepository.getProfileFlow(any()) } returns flowOf(testProfile)
         coEvery { userRepository.updateStreak(any()) } returns Unit
+        every { workoutRepository.getWorkouts(any()) } returns flowOf(emptyList())
         every { mealRepository.getMealsForDay(any(), any()) } returns flowOf(testMeals)
         every { weightRepository.getLatestWeight() } returns flowOf(WeightEntry(weightKg = 80.0f))
         
         every { healthConnectManager.healthConnectSteps } returns MutableStateFlow(5000)
+        every { healthConnectManager.distanceKm } returns MutableStateFlow(3.5f)
+        every { healthConnectManager.caloriesBurned } returns MutableStateFlow(200)
         every { healthConnectManager.sleepDurationMinutes } returns MutableStateFlow(420)
+        every { healthConnectManager.peakHeartRate } returns MutableStateFlow(0)
+        every { healthConnectManager.heartRateSamples } returns MutableStateFlow(emptyList())
+        coEvery { healthConnectManager.fetchWeeklySteps() } returns emptyList()
+        coEvery { healthConnectManager.fetchDailySteps() } returns Unit
+        coEvery { healthConnectManager.fetchDailySleep() } returns Unit
+        coEvery { healthConnectManager.fetchDailyHeartRate() } returns Unit
 
         viewModel = HomeViewModel(
             mealRepository = mealRepository,
             weightRepository = weightRepository,
             userRepository = userRepository,
+            workoutRepository = workoutRepository,
             leaderboardRepository = leaderboardRepository,
             healthConnectManager = healthConnectManager,
+            tokenManager = tokenManager,
             context = context
         )
     }
 
     @After
     fun tearDown() {
-        unmockkAll()
+        clearAllMocks()
     }
 
     @Test

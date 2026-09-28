@@ -129,12 +129,7 @@ fun Navigation() {
             }
         }
     } else {
-        // Loading Splash
-        Box(
-            modifier = Modifier.fillMaxSize().background(PageBg),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = SunsetOrange, strokeWidth = 4.dp)
-        }
+        // Modern Branded Pulse Splash Screen
+        com.example.gymfitness.presentation.screen.splash.SplashScreen()
     }
 }

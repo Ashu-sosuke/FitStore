@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -51,13 +52,17 @@ import java.util.Locale
 fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = LimeGreen,
-            contentColor = Color(0xFF121212)
+            contentColor = Color(0xFF121212),
+            disabledContainerColor = SurfaceAltDark,
+            disabledContentColor = TextMutedDark
         ),
         shape = CircleShape,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
@@ -74,12 +79,17 @@ fun PrimaryButton(
 fun GhostButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     OutlinedButton(
         onClick = onClick,
-        border = BorderStroke(1.2.dp, LimeGreen),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = LimeGreen),
+        enabled = enabled,
+        border = BorderStroke(1.2.dp, if (enabled) LimeGreen else StrokeDark),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = LimeGreen,
+            disabledContentColor = TextMutedDark
+        ),
         shape = CircleShape,
         modifier = modifier.height(56.dp)
     ) {
@@ -158,12 +168,16 @@ fun PrimaryInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    singleLine: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, color = TextMutedDark) },
+        keyboardOptions = keyboardOptions,
+        singleLine = singleLine,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = LimeGreen,
             unfocusedBorderColor = StrokeDark,

@@ -49,7 +49,7 @@ fun GetStart(
                 val encodedName = java.net.URLEncoder.encode(
                     successState.displayName.ifEmpty { "" }, "UTF-8"
                 )
-                navController.navigate("onboarding_screen?displayName=$encodedName") {
+                navController.navigate(Screen.Onboarding.createRoute(encodedName)) {
                     popUpTo(Screen.GetStart.route) { inclusive = true }
                 }
             } else {
@@ -176,6 +176,7 @@ fun GetStart(
                         )
                         OutlinedButton(
                             onClick = {
+                                authViewModel.signInAsGuest()
                                 navController.navigate(Screen.Onboarding.createRoute())
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = InkBlack),

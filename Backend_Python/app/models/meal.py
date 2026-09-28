@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class MealType(str, Enum):
@@ -23,10 +23,10 @@ class MealCreate(MealBase):
 
 class Meal(MealBase):
     id: Optional[str] = Field(None, alias="_id")
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {datetime: lambda v: v.isoformat()}
 
@@ -45,6 +45,6 @@ class Nutrient(NutrientBase):
     id: Optional[str] = Field(None, alias="_id")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
         arbitrary_types_allowed = True
 

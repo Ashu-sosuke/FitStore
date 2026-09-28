@@ -57,13 +57,40 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE user_table ADD COLUMN goalPriority TEXT NOT NULL DEFAULT 'balanced'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN trainingHistory TEXT NOT NULL DEFAULT 'just_starting'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN currentRoutine TEXT NOT NULL DEFAULT 'no_routine'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN trainingLocation TEXT NOT NULL DEFAULT 'commercial_gym'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN warmupIncluded INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN sessionDurationMinutes INTEGER NOT NULL DEFAULT 60")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN daysPerWeek INTEGER NOT NULL DEFAULT 4")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN trainingStyle TEXT NOT NULL DEFAULT 'bodybuilding'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN intensityPreference TEXT NOT NULL DEFAULT 'moderate'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN sleepHours TEXT NOT NULL DEFAULT '7_8h'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN stressLevel TEXT NOT NULL DEFAULT 'moderate'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN dietPreference TEXT NOT NULL DEFAULT 'non_veg'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN mealFrequency INTEGER NOT NULL DEFAULT 3")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN nutritionPriority TEXT NOT NULL DEFAULT 'high_protein'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN planAdaptability TEXT NOT NULL DEFAULT 'hybrid'")
+                db.execSQL("ALTER TABLE user_table ADD COLUMN progressionModel TEXT NOT NULL DEFAULT 'progressive_overload'")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE user_table ADD COLUMN dailyStepTarget INTEGER NOT NULL DEFAULT 10000")
+            }
+        }
 
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "gym_fitness_db"
         )
-            .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .fallbackToDestructiveMigration()
             .build()
 
     }

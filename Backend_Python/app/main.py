@@ -2,8 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, Security, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 from app.routes import profile, workout, meal, auth, leaderboard, food_scanner
 import jwt
+import logging
 from app.database import ping_db, db
 from app.services.dataset_loader import seed_exercise_catalog, DATASET_DIR
 import uvicorn
@@ -12,9 +14,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 from typing import Optional
 
 API_KEY = os.getenv("API_KEY", "FitStore_Secret_Key_2026_Secure")
+JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("API_KEY") or "FitStore_JWT_Signing_Key_2026_Change_Me"
 security = HTTPBearer(auto_error=False)
 
 async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Security(security)):
@@ -30,12 +35,11 @@ async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCr
             return "api_key_authorized"
 
         try:
-            payload = jwt.decode(token, API_KEY, algorithms=["HS256"])
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             device_id = payload.get("sub")
             path_device_id = request.path_params.get("device_id") or request.path_params.get("deviceId") or request.path_params.get("userId")
             if path_device_id and device_id and path_device_id != device_id:
-                # Log but permit if authenticated
-                pass
+                raise HTTPException(status_code=403, detail="Access denied: token does not match requested resource")
             return device_id or "authorized_user"
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
@@ -48,27 +52,46 @@ async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCr
     # If neither Bearer nor X-API-KEY was provided
     raise HTTPException(status_code=401, detail="Authentication credentials were not provided (Bearer token or X-API-KEY required)")
 
-app = FastAPI(title="FitStore API", description="Python-based Backend for Fitness Tracking App")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: startup and shutdown logic."""
+    if not API_KEY:
+        logger.warning("API_KEY is not set! Authentication will not work.")
+    if not JWT_SECRET:
+        logger.warning("JWT_SECRET is not set! Token signing/verification will fail.")
+    try:
+        await ping_db()
+        await db["userprofiles"].create_index("friendCode", unique=True, sparse=True)
+        await db["friends"].create_index("userId", unique=True)
+        await db["leaderboard_stats"].create_index("userId", unique=True)
+        await seed_exercise_catalog(db["exercises_catalog"])
+        logger.info("Database indexes and exercises catalog verified/created.")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.info("Application will continue, but database operations may fail.")
+    yield
+
+app = FastAPI(title="FitStore API", description="Python-based Backend for Fitness Tracking App", lifespan=lifespan)
 
 # Request Logger Middleware
 @app.middleware("http")
 async def log_requests(request, call_next):
-    print(f"Incoming Request: {request.method} {request.url}")
+    logger.info(f"Incoming Request: {request.method} {request.url}")
     try:
         response = await call_next(request)
-        print(f"Response Status: {response.status_code}")
+        logger.info(f"Response Status: {response.status_code}")
         if response.status_code == 422:
-            print(f"Validation Error occurred for {request.method} {request.url}")
+            logger.warning(f"Validation Error occurred for {request.method} {request.url}")
         return response
     except Exception as e:
-        print(f"Request failed: {str(e)}")
+        logger.error(f"Request failed: {str(e)}")
         raise e
 
-# CORS setup
+# CORS setup — credentials disabled with wildcard origins for security
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -89,24 +112,8 @@ if not os.path.exists(gifs_path):
 
 if os.path.exists(gifs_path):
     app.mount("/static/exercise-gifs", StaticFiles(directory=gifs_path), name="exercise_gifs")
-    print(f"[OK] Mounted static exercise GIFs from {gifs_path}")
+    logger.info(f"Mounted static exercise GIFs from {gifs_path}")
 
-# Database connection and startup check
-@app.on_event("startup")
-async def startup_db_client():
-    try:
-        await ping_db()
-        # Create indexes for leaderboard
-        await db["userprofiles"].create_index("friendCode", unique=True, sparse=True)
-        await db["friends"].create_index("userId", unique=True)
-        await db["leaderboard_stats"].create_index("userId", unique=True)
-        
-        # Seed exercise catalog
-        await seed_exercise_catalog(db["exercises_catalog"])
-        print("[OK] Database indexes and exercises catalog verified/created.")
-    except Exception as e:
-        print(f"[WARNING] Database initialization failed: {e}")
-        print("[INFO] Application will continue, but database operations may fail.")
 
 # Include Routers with Security
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -114,7 +121,12 @@ app.include_router(profile.router, prefix="/api/profile", tags=["Profile"], depe
 app.include_router(workout.router, prefix="/api/workouts", tags=["Workouts"], dependencies=[Depends(verify_jwt)])
 app.include_router(meal.router, prefix="/api/meals", tags=["Meals"], dependencies=[Depends(verify_jwt)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"], dependencies=[Depends(verify_jwt)])
-app.include_router(food_scanner.router, tags=["Food Vision Scanner"])
+app.include_router(food_scanner.router, tags=["Food Vision Scanner"], dependencies=[Depends(verify_jwt)])
+
+@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
+async def root_health_check():
+    return {"status": "healthy", "service": "Pulse API", "version": "2.0"}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))

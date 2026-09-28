@@ -1,5 +1,6 @@
 package com.example.gymfitness.presentation.state
 
+import com.example.gymfitness.domain.models.Workout
 import java.time.LocalDate
 
 data class DayStepEntry(
@@ -31,8 +32,12 @@ data class HomeState(
     val caloriesBurned: Int = 0,
     val weeklySteps: List<DayStepEntry> = emptyList(),
     val sleepMinutes: Int = 0,
+    val heartRatePeak: Int = 72,
+    val heartRateSamples: List<Int> = listOf(68, 72, 70, 75, 78, 74, 72, 69),
     val currentStreak: Int = 0,
     val isHealthConnectGranted: Boolean = false,
+    val workouts: List<Workout> = emptyList(),
+    val activeSplitTitle: String = "Personalized Split",
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )

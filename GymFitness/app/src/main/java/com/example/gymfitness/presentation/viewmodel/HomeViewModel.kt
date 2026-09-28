@@ -1,27 +1,20 @@
 package com.example.gymfitness.presentation.viewmodel
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.gymfitness.domain.repository.LeaderboardRepository
 import com.example.gymfitness.domain.repository.MealRepository
 import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.repository.WeightRepository
-import com.example.gymfitness.domain.repository.LeaderboardRepository
+import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.presentation.state.HomeState
 import com.example.gymfitness.utils.HealthConnectManager
 import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,6 +24,7 @@ class HomeViewModel @Inject constructor(
     private val mealRepository: MealRepository,
     private val weightRepository: WeightRepository,
     private val userRepository: UserRepository,
+    private val workoutRepository: WorkoutRepository,
     private val leaderboardRepository: LeaderboardRepository,
     private val healthConnectManager: HealthConnectManager,
     private val tokenManager: TokenManager,
@@ -54,8 +48,10 @@ class HomeViewModel @Inject constructor(
     init {
         observeUserData()
         loadDashboardData()
+        observeWorkouts()
         observeHealthConnectSteps()
         observeHealthConnectSleep()
+        observeHealthConnectHeartRate()
         checkAndUpdateStreak()
         startPeriodicHealthRefresh()
     }
@@ -64,7 +60,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 userRepository.updateStreak(deviceId)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Non-blocking local failure handling
             }
         }
@@ -81,10 +77,20 @@ class HomeViewModel @Inject constructor(
                             carbsTarget = it.carbsTarget.toFloat(),
                             fatsTarget = it.fatsTarget.toFloat(),
                             userName = it.name,
-                            currentStreak = it.currentStreak
+                            currentStreak = it.currentStreak,
+                            stepsTarget = if (it.dailyStepTarget > 0) it.dailyStepTarget else 10000,
+                            activeSplitTitle = it.activeSplit ?: "${it.daysPerWeekAvailable}-Day Routine"
                         )
                     }
                 }
+            }
+        }
+    }
+
+    private fun observeWorkouts() {
+        viewModelScope.launch {
+            workoutRepository.getWorkouts(deviceId).collect { list ->
+                _state.update { it.copy(workouts = list) }
             }
         }
     }
@@ -129,7 +135,7 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(stepsWalked = steps) }
                 try {
                     leaderboardRepository.syncPoints(0)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Non-blocking sync
                 }
             }
@@ -154,12 +160,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun observeHealthConnectHeartRate() {
+        viewModelScope.launch {
+            healthConnectManager.peakHeartRate.collect { bpm ->
+                _state.update { it.copy(heartRatePeak = bpm) }
+            }
+        }
+        viewModelScope.launch {
+            healthConnectManager.heartRateSamples.collect { samples ->
+                _state.update { it.copy(heartRateSamples = samples) }
+            }
+        }
+    }
+
     fun fetchHealthConnectSteps() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             try {
                 healthConnectManager.fetchDailySteps()
                 healthConnectManager.fetchDailySleep()
+                healthConnectManager.fetchDailyHeartRate()
                 val weekly = healthConnectManager.fetchWeeklySteps()
                 
                 _state.update { currentState ->
@@ -168,16 +188,18 @@ class HomeViewModel @Inject constructor(
                         stepsWalked = healthConnectManager.healthConnectSteps.value,
                         distanceKm = healthConnectManager.distanceKm.value,
                         caloriesBurned = healthConnectManager.caloriesBurned.value,
+                        heartRatePeak = healthConnectManager.peakHeartRate.value,
+                        heartRateSamples = healthConnectManager.heartRateSamples.value,
                         isHealthConnectGranted = healthConnectManager.isAvailable && (weekly.isNotEmpty() || currentState.stepsWalked > 0),
                         isLoading = false
                     )
                 }
                 try {
                     leaderboardRepository.syncPoints(0)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Non-blocking leaderboard update
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _state.update { it.copy(isLoading = false, errorMessage = "Failed to load Health Connect data") }
             }
         }
@@ -187,9 +209,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             while (isActive) {
                 delay(60_000) // Refresh every 60s for foreground live counters
-                if (_state.value.isHealthConnectGranted) {
+                if (_state.value.isHealthConnectGranted || healthConnectManager.isAvailable) {
                     healthConnectManager.fetchDailySteps()
                     healthConnectManager.fetchDailySleep()
+                    healthConnectManager.fetchDailyHeartRate()
                 }
             }
         }

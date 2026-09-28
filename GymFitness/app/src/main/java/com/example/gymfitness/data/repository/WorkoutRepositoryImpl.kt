@@ -78,7 +78,12 @@ class WorkoutRepositoryImpl @Inject constructor(
 
     override suspend fun adoptPlan(deviceId: String, plan: GeneratedWorkoutPlan): Result<Boolean> {
         return try {
-            // 1. Save all non-rest daily routines to local Room database
+            // 1. Clear previous auto-scheduled workouts to ensure fresh clean split
+            try {
+                workoutDao.clearAllWorkouts()
+            } catch (_: Exception) {}
+
+            // 2. Save all non-rest daily routines to local Room database
             for (routine in plan.dailyRoutines) {
                 if (routine.isRestDay || routine.exercises.isEmpty()) continue
 
@@ -128,5 +133,14 @@ class WorkoutRepositoryImpl @Inject constructor(
 
     override suspend fun addSet(exerciseId: Long, reps: Int, weightKg: Float) {
         workoutDao.insertSet(SetEntity(exerciseId = exerciseId, reps = reps, weightKg = weightKg))
+    }
+
+    override suspend fun deleteWorkoutById(workoutId: Long): Result<Boolean> {
+        return try {
+            workoutDao.deleteWorkoutById(workoutId)
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

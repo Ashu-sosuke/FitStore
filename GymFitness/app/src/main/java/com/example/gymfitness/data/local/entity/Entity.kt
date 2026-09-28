@@ -29,7 +29,24 @@ data class UserEntity(
     val lastLaunchDateMs: Long = 0L,
     val isSynced: Boolean = false,
     val friendCode: String? = null,
-    val showOnLeaderboards: Boolean = true
+    val showOnLeaderboards: Boolean = true,
+    val dailyStepTarget: Int = 10000,
+    val goalPriority: String = "balanced",
+    val trainingHistory: String = "just_starting",
+    val currentRoutine: String = "no_routine",
+    val trainingLocation: String = "commercial_gym",
+    val warmupIncluded: Boolean = true,
+    val sessionDurationMinutes: Int = 60,
+    val daysPerWeek: Int = 4,
+    val trainingStyle: String = "bodybuilding",
+    val intensityPreference: String = "moderate",
+    val sleepHours: String = "7_8h",
+    val stressLevel: String = "moderate",
+    val dietPreference: String = "non_veg",
+    val mealFrequency: Int = 3,
+    val nutritionPriority: String = "high_protein",
+    val planAdaptability: String = "hybrid",
+    val progressionModel: String = "progressive_overload"
 )
 
 

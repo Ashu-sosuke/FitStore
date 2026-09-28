@@ -18,4 +18,5 @@ interface WorkoutRepository {
     // Granular methods for local tracking
     suspend fun addExercise(workoutId: Long, name: String): Long
     suspend fun addSet(exerciseId: Long, reps: Int, weightKg: Float)
+    suspend fun deleteWorkoutById(workoutId: Long): Result<Boolean>
 }

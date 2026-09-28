@@ -11,12 +11,12 @@ import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.utils.MainDispatcherRule
+import com.example.gymfitness.utils.TokenManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkAll
+import io.mockk.clearAllMocks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -39,6 +39,7 @@ class UserViewModelTest {
     private lateinit var workoutRepository: WorkoutRepository
     private lateinit var generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase
     private lateinit var db: AppDatabase
+    private lateinit var tokenManager: TokenManager
     private lateinit var context: Context
     private lateinit var viewModel: UserViewModel
 
@@ -60,15 +61,15 @@ class UserViewModelTest {
 
     @Before
     fun setUp() {
-        mockkStatic(Settings.Secure::class)
-        every { Settings.Secure.getString(any(), any()) } returns deviceId
-
         repository = mockk(relaxed = true)
         workoutRepository = mockk(relaxed = true)
         generateWorkoutPlanUseCase = mockk(relaxed = true)
         db = mockk(relaxed = true)
+        tokenManager = mockk(relaxed = true)
         context = mockk(relaxed = true)
 
+        every { tokenManager.getUserId() } returns deviceId
+        coEvery { repository.getProfile(any()) } returns testProfile
         every { repository.getProfileFlow(any()) } returns flowOf(testProfile)
 
         viewModel = UserViewModel(
@@ -76,13 +77,14 @@ class UserViewModelTest {
             workoutRepository = workoutRepository,
             generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
             db = db,
+            tokenManager = tokenManager,
             context = context
         )
     }
 
     @After
     fun tearDown() {
-        unmockkAll()
+        clearAllMocks()
     }
 
     @Test
@@ -95,12 +97,15 @@ class UserViewModelTest {
 
     @Test
     fun `init determines startDestination is GetStart when profile is null`() = runTest {
+        coEvery { repository.getProfile(any()) } returns null
+        coEvery { repository.syncProfile(any()) } returns Result.failure(Exception("Not found"))
         every { repository.getProfileFlow(any()) } returns flowOf(null)
         val emptyVm = UserViewModel(
             repository = repository,
             workoutRepository = workoutRepository,
             generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
             db = db,
+            tokenManager = tokenManager,
             context = context
         )
         emptyVm.startDestination.test {
@@ -111,6 +116,11 @@ class UserViewModelTest {
 
     @Test
     fun `nextStep increments and previousStep decrements currentStep within bounds`() {
+        viewModel.name = "John Doe"
+        viewModel.weight = "75"
+        viewModel.height = "180"
+        viewModel.age = "25"
+
         assertEquals(0, viewModel.currentStep)
 
         viewModel.nextStep()
@@ -122,7 +132,19 @@ class UserViewModelTest {
         viewModel.nextStep()
         assertEquals(3, viewModel.currentStep)
 
-        viewModel.nextStep() // bound check (max 3)
+        viewModel.nextStep()
+        assertEquals(4, viewModel.currentStep)
+
+        viewModel.nextStep()
+        assertEquals(5, viewModel.currentStep)
+
+        viewModel.nextStep() // bound check (max 5)
+        assertEquals(5, viewModel.currentStep)
+
+        viewModel.previousStep()
+        assertEquals(4, viewModel.currentStep)
+
+        viewModel.previousStep()
         assertEquals(3, viewModel.currentStep)
 
         viewModel.previousStep()

@@ -1,6 +1,7 @@
 import io
 import os
 import json
+import re
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,6 +86,8 @@ async def scan_food(
         image_bytes = await file.read()
         if len(image_bytes) == 0:
             raise HTTPException(status_code=400, detail="Empty image uploaded")
+        if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(status_code=413, detail="Image too large. Maximum size is 10MB.")
 
         predicted_food = "Chicken"
         confidence = 0.94
@@ -109,7 +112,8 @@ async def scan_food(
         # Lookup nutrients from MongoDB
         nutrient_doc = None
         try:
-            nutrient_doc = await db["nutrients"].find_one({"name": {"$regex": f"^{predicted_food}$", "$options": "i"}})
+            safe_food = re.escape(predicted_food)
+            nutrient_doc = await db["nutrients"].find_one({"name": {"$regex": f"^{safe_food}$", "$options": "i"}})
         except Exception:
             pass
 
@@ -161,4 +165,4 @@ async def scan_food(
 
     except Exception as e:
         logger.error(f"Error in scan-food: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Food scanning failed. Please try again.")

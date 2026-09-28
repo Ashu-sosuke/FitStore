@@ -8,10 +8,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,11 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.gymfitness.R
+import com.example.gymfitness.domain.models.Workout
 import com.example.gymfitness.presentation.components.*
 import com.example.gymfitness.presentation.componts.BottomNavBar
 import com.example.gymfitness.presentation.navigation.Screen
@@ -56,7 +62,8 @@ fun HomeScreen(
 
     val permissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class)
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(HeartRateRecord::class)
     )
     
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -199,16 +206,16 @@ fun HomeScreenContent(
 
             Spacer(Modifier.height(20.dp))
 
-            // Refactored Daily Progress Card
+            // Daily Progress Card (Nutrition & Macro Targets)
             DailyProgressCard(
                 caloriesEaten = state.caloriesEaten.toInt(),
-                caloriesTarget = state.caloriesTarget.toInt(),
+                caloriesTarget = if (state.caloriesTarget > 0) state.caloriesTarget.toInt() else 2000,
                 protein = state.protein,
-                proteinTarget = state.proteinTarget,
+                proteinTarget = if (state.proteinTarget > 0) state.proteinTarget else 140f,
                 carbs = state.carbs,
-                carbsTarget = state.carbsTarget,
+                carbsTarget = if (state.carbsTarget > 0) state.carbsTarget else 220f,
                 fat = state.fat,
-                fatsTarget = state.fatsTarget,
+                fatsTarget = if (state.fatsTarget > 0) state.fatsTarget else 65f,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
@@ -244,7 +251,7 @@ fun HomeScreenContent(
                     .clickable { navController.navigate(Screen.Analytics.route) }
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Top Row: Steps count + Percentage Badge
+                    // Top Row: Steps count + Dynamic Percentage Badge based on custom step target
                     val stepsTarget = if (state.stepsTarget > 0) state.stepsTarget else 10000
                     val stepPct = ((state.stepsWalked.toFloat() / stepsTarget.toFloat()) * 100).toInt().coerceIn(0, 999)
 
@@ -284,7 +291,7 @@ fun HomeScreenContent(
                         }
                     }
 
-                    // Progress Bar
+                    // Dynamic Progress Bar against custom step target
                     val progressAnim by androidx.compose.animation.core.animateFloatAsState(
                         targetValue = (state.stepsWalked.toFloat() / stepsTarget.toFloat()).coerceIn(0f, 1f),
                         label = "stepProgress"
@@ -336,7 +343,7 @@ fun HomeScreenContent(
                         }
                     }
 
-                    Divider(color = StrokeDark)
+                    HorizontalDivider(color = StrokeDark)
 
                     // Weekly Steps Chart
                     StepsBarChart(
@@ -350,7 +357,23 @@ fun HomeScreenContent(
 
             Spacer(Modifier.height(24.dp))
 
-            // Workout section
+            // Active Split Hero Banner
+            if (state.workouts.isNotEmpty()) {
+                val todayWorkout = state.workouts.firstOrNull()
+                ActiveSplitHeroCard(
+                    splitTitle = state.activeSplitTitle,
+                    nextWorkoutName = todayWorkout?.name ?: "Upcoming Routine",
+                    exerciseCount = todayWorkout?.exercises?.size ?: 5,
+                    onStartClick = {
+                        todayWorkout?.id?.let { wid ->
+                            navController.navigate(Screen.WorkoutDetail.createRoute(wid))
+                        } ?: navController.navigate(Screen.Workout.route)
+                    }
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+
+            // Scheduled Workouts Carousel Section
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -359,7 +382,7 @@ fun HomeScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Next Workouts",
+                    text = "Scheduled Routines",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = OffWhite
                 )
@@ -373,20 +396,34 @@ fun HomeScreenContent(
 
             Spacer(Modifier.height(12.dp))
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(3) { index ->
-                    WorkoutCard(index)
+            if (state.workouts.isEmpty()) {
+                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    EmptyWorkoutCard(onCreateClick = { navController.navigate(Screen.PlanGenerator.route) })
+                }
+            } else {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    itemsIndexed(state.workouts) { index, workout ->
+                        LiveWorkoutCard(
+                            workout = workout,
+                            index = index,
+                            onClick = {
+                                workout.id?.let { wid ->
+                                    navController.navigate(Screen.WorkoutDetail.createRoute(wid))
+                                } ?: navController.navigate(Screen.Workout.route)
+                            }
+                        )
+                    }
                 }
             }
 
             Spacer(Modifier.height(24.dp))
             
-            // Quick Stats / Today's Activity
+            // Quick Stats / Today's Activity (Sleep, Steps, Heart Rate)
             Text(
-                text = "Today's Activity",
+                text = "Today's Biometrics",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = OffWhite,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -397,7 +434,7 @@ fun HomeScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val sleepHours = state.sleepMinutes / 60
                 val sleepMins = state.sleepMinutes % 60
@@ -414,14 +451,98 @@ fun HomeScreenContent(
                 SmallStatCard(
                     label = "Steps",
                     value = String.format(Locale.getDefault(), "%,d", state.stepsWalked),
-                    subValue = "of ${state.stepsTarget / 1000}k target",
+                    subValue = "of ${state.stepsTarget / 1000}k goal",
                     isGranted = state.isHealthConnectGranted,
                     onConnectClick = onConnectHealth,
+                    modifier = Modifier.weight(1f)
+                )
+                SmallStatCard(
+                    label = "Heart Rate",
+                    value = "${state.heartRatePeak} BPM",
+                    subValue = "Daily Peak",
+                    isGranted = state.isHealthConnectGranted,
+                    onConnectClick = { navController.navigate(Screen.Analytics.route) },
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(Modifier.height(100.dp))
+        }
+    }
+}
+
+@Composable
+fun ActiveSplitHeroCard(
+    splitTitle: String,
+    nextWorkoutName: String,
+    exerciseCount: Int,
+    onStartClick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .border(1.dp, LimeGreen.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+            .clickable { onStartClick() }
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = LimeGreen, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "ACTIVE SPLIT",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                        color = LimeGreen
+                    )
+                }
+                Surface(
+                    color = LimeTintDark,
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = "$exerciseCount Exercises",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = LimeDeepDark,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = nextWorkoutName,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+                color = OffWhite
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = splitTitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMutedDark
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = onStartClick,
+                colors = ButtonDefaults.buttonColors(containerColor = LimeGreen, contentColor = Color(0xFF121212)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().height(44.dp)
+            ) {
+                Icon(Icons.Filled.FitnessCenter, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("View Workout Details ➔", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
         }
     }
 }
@@ -433,7 +554,7 @@ fun EmptyWorkoutCard(onCreateClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(130.dp)
     ) {
         Column(
             modifier = Modifier
@@ -443,25 +564,28 @@ fun EmptyWorkoutCard(onCreateClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "No upcoming workouts scheduled",
+                text = "No routines scheduled yet",
                 style = MaterialTheme.typography.bodyLarge,
                 color = TextMutedDark
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             GhostButton(
-                text = "+ Create Plan",
+                text = "+ Generate AI Split",
                 onClick = onCreateClick,
-                modifier = Modifier.height(40.dp)
+                modifier = Modifier.height(42.dp)
             )
         }
     }
 }
 
 @Composable
-fun WorkoutCard(index: Int) {
-    val title = if (index % 2 == 0) "Chest & Triceps" else "Legs & Core"
-    val duration = if (index % 2 == 0) "45 mins" else "60 mins"
+fun LiveWorkoutCard(
+    workout: Workout,
+    index: Int,
+    onClick: () -> Unit
+) {
     val image = if (index % 2 == 0) R.drawable.b2d3a8fe2d64f98ca2ebea9744a06e78 else R.drawable._9e84ac439f8ba294d6f17a2f2a64cd1
+    val durationStr = "${maxOf(30, workout.exercises.size * 8)} mins"
     
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -469,6 +593,7 @@ fun WorkoutCard(index: Int) {
         modifier = Modifier
             .width(260.dp)
             .height(180.dp)
+            .clickable { onClick() }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -482,8 +607,8 @@ fun WorkoutCard(index: Int) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
-                            startY = 80f
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.88f)),
+                            startY = 60f
                         )
                     )
             )
@@ -494,8 +619,8 @@ fun WorkoutCard(index: Int) {
                     .align(Alignment.TopStart),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                CategoryBadge(text = duration, colorTint = Color.Black.copy(alpha = 0.6f), textColor = LimeGreen)
-                CategoryBadge(text = "Advanced", colorTint = LimeTintDark.copy(alpha = 0.9f), textColor = LimeGreen)
+                CategoryBadge(text = durationStr, colorTint = Color.Black.copy(alpha = 0.65f), textColor = LimeGreen)
+                CategoryBadge(text = "${workout.exercises.size} Moves", colorTint = LimeTintDark.copy(alpha = 0.9f), textColor = LimeGreen)
             }
 
             Column(
@@ -504,9 +629,16 @@ fun WorkoutCard(index: Int) {
                     .align(Alignment.BottomStart)
             ) {
                 Text(
-                    text = title, 
+                    text = workout.name, 
                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold), 
-                    color = Color.White
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Tap to view details ➔",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LimeGreen
                 )
             }
         }
@@ -528,7 +660,9 @@ fun PreviewHomeScreenContent() {
             fat = 50f,
             fatsTarget = 65f,
             stepsWalked = 8542,
+            stepsTarget = 10000,
             sleepMinutes = 450,
+            heartRatePeak = 128,
             currentStreak = 2,
             isHealthConnectGranted = true,
             weeklySteps = listOf(
