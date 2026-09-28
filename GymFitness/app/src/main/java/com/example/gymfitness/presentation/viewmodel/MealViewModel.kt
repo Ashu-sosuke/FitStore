@@ -124,6 +124,9 @@ class MealViewModel @Inject constructor(
     // Prevents flooding the 172.29.97.7 server with 30fps camera frames
     private var lastAnalysisTime = 0L
 
+    private val _scanAlternatives = MutableStateFlow<List<String>>(emptyList())
+    val scanAlternatives = _scanAlternatives.asStateFlow()
+
     fun identifyFoodWithFastAPI(bitmap: Bitmap) {
         val currentTime = System.currentTimeMillis()
 
@@ -137,13 +140,11 @@ class MealViewModel @Inject constructor(
             Log.d("SCANNER", "🚀 Uploading image for analysis...")
 
             try {
-                // FIXED: 'body' is now correctly defined here
                 val body = bitmap.toMultipartBody()
-
-                // Triggers the predict_food() flow in your Python backend
                 val response = api.scanFood(body)
 
                 Log.d("SCANNER", "✅ Success: Received ${response.foodName}")
+                _scanAlternatives.value = response.topAlternatives ?: emptyList()
 
                 // Determine meal type based on time
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -166,6 +167,31 @@ class MealViewModel @Inject constructor(
                 Log.e("SCANNER", "❌ Error: ${e.localizedMessage}")
             } finally {
                 _isAnalyzing.value = false
+            }
+        }
+    }
+
+    fun selectAlternativeFood(foodName: String) {
+        viewModelScope.launch {
+            try {
+                val results = mealApi.searchFood(foodName)
+                val match = results.firstOrNull()
+                val current = _scannedFood.value
+                val mealType = current?.mealType ?: "lunch"
+                if (match != null) {
+                    _scannedFood.value = MealEntity(
+                        name = match.foodName,
+                        calories = match.calories.toFloat(),
+                        proteinG = match.proteinG.toFloat(),
+                        carbsG = match.carbsG.toFloat(),
+                        fatG = match.fatsG.toFloat(),
+                        mealType = mealType
+                    )
+                } else {
+                    _scannedFood.value = current?.copy(name = foodName)
+                }
+            } catch (e: Exception) {
+                Log.e("SCANNER", "Failed to switch alternative: ${e.localizedMessage}")
             }
         }
     }

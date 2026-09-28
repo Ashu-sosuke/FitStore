@@ -274,6 +274,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
         }
 
         // Scan Result Overlay
+        val scanAlternatives by viewModel.scanAlternatives.collectAsState()
         AnimatedVisibility(
             visible = scannedResult != null,
             modifier = Modifier
@@ -286,6 +287,8 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
             scannedResult?.let { food ->
                 ResultPopup(
                     food = food,
+                    alternatives = scanAlternatives,
+                    onSelectAlternative = { altName -> viewModel.selectAlternativeFood(altName) },
                     onAdd = { calculatedMeal ->
                         viewModel.saveMealToRoom(calculatedMeal)
                         viewModel.clearResult()
@@ -311,6 +314,8 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
 @Composable
 fun ResultPopup(
     food: MealEntity,
+    alternatives: List<String> = emptyList(),
+    onSelectAlternative: (String) -> Unit = {},
     onAdd: (MealEntity) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -324,17 +329,18 @@ fun ResultPopup(
     val calculatedCarbs = food.carbsG * multiplier
     val calculatedFat = food.fatG * multiplier
 
-    val foodIcon = when (food.name.lowercase()) {
-        "egg" -> "🍳"
-        "chicken" -> "🍗"
-        "milk" -> "🥛"
-        "broccoli" -> "🥦"
-        "avocado" -> "🥑"
-        "salmon" -> "🐟"
-        "rice" -> "🍚"
-        "apple" -> "🍎"
-        "banana" -> "🍌"
-        "oats" -> "🥣"
+    val foodIcon = when {
+        food.name.contains("egg", ignoreCase = true) -> "🍳"
+        food.name.contains("chicken", ignoreCase = true) -> "🍗"
+        food.name.contains("milk", ignoreCase = true) -> "🥛"
+        food.name.contains("paneer", ignoreCase = true) -> "🧀"
+        food.name.contains("rice", ignoreCase = true) || food.name.contains("biryani", ignoreCase = true) -> "🍚"
+        food.name.contains("dal", ignoreCase = true) -> "🍲"
+        food.name.contains("roti", ignoreCase = true) || food.name.contains("chapati", ignoreCase = true) || food.name.contains("paratha", ignoreCase = true) -> "🫓"
+        food.name.contains("dosa", ignoreCase = true) || food.name.contains("idli", ignoreCase = true) -> "🥞"
+        food.name.contains("samosa", ignoreCase = true) -> "🥟"
+        food.name.contains("palak", ignoreCase = true) || food.name.contains("broccoli", ignoreCase = true) -> "🥦"
+        food.name.contains("banana", ignoreCase = true) -> "🍌"
         else -> "🥗"
     }
 
@@ -388,6 +394,42 @@ fun ResultPopup(
                         .background(SurfaceAlt, CircleShape)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = InkBlack, modifier = Modifier.size(18.dp))
+                }
+            }
+
+            // Top Alternative Suggestions
+            if (alternatives.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "MATCH SUGGESTIONS",
+                    style = Typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                    color = TextMuted
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    alternatives.take(3).forEach { alt ->
+                        val isSelected = food.name.equals(alt, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) OrangeTint else SurfaceAlt)
+                                .border(1.dp, if (isSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
+                                .clickable { onSelectAlternative(alt) }
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = alt,
+                                color = if (isSelected) SunsetOrange else InkBlack,
+                                style = Typography.labelSmall.copy(fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
 
