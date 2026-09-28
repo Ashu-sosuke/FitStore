@@ -73,7 +73,7 @@ class AuthViewModel @Inject constructor(
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
                     .setServerClientId("500152435261-3jh26rjta849q5l9jr6fkmg8l3kbhoal.apps.googleusercontent.com")
-                    .setAutoSelectEnabled(true)
+                    .setAutoSelectEnabled(false)
                     .build()
 
                 val request = GetCredentialRequest.Builder()
@@ -170,6 +170,14 @@ class AuthViewModel @Inject constructor(
                     email = email.ifEmpty { firebaseUser.email ?: "" }
                 )
 
+            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                Log.d("AUTH", "User cancelled Google Sign-In")
+                _uiState.value = AuthUiState.Idle
+            } catch (e: androidx.credentials.exceptions.NoCredentialException) {
+                Log.e("AUTH", "No credentials available: ${e.localizedMessage}", e)
+                _uiState.value = AuthUiState.Error(
+                    "No Google credentials available. Ensure a Google account is logged into device Settings and debug SHA-1 fingerprint is registered in Firebase."
+                )
             } catch (e: Exception) {
                 Log.e("AUTH", "Google Sign-In failed: ${e.localizedMessage}", e)
                 _uiState.value = AuthUiState.Error(
