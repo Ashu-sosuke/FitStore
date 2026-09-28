@@ -32,7 +32,6 @@ import com.example.gymfitness.ui.theme.PageBg // Updated
 import com.example.gymfitness.ui.theme.SunsetOrange // Updated
 
 import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import com.example.gymfitness.presentation.screen.workoutdetail.WorkoutDetailScreen
 import com.example.gymfitness.presentation.screen.workoutdetail.CreatePlanScreen
 import com.example.gymfitness.presentation.screen.progress.AnalyticsScreen
@@ -120,7 +119,7 @@ fun Navigation() {
                     onBack = { navController.navigateUp() },
                     onCompare = { /* Compare view can be implemented if needed */ },
                     viewModel = friendCodeViewModel,
-                    currentUserId = ""
+                    currentUserId = userViewModel.deviceId
                 )
             }
 

@@ -13,6 +13,7 @@ import com.example.gymfitness.domain.repository.WorkoutRepository
 import com.example.gymfitness.domain.usecase.workout.GenerateWorkoutPlanUseCase
 import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.utils.TokenManager
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -395,6 +396,10 @@ class UserViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 db.clearAllTables()
+            } catch (_: Exception) { }
+            // Sign out of Firebase to clear the persisted auth session
+            try {
+                FirebaseAuth.getInstance().signOut()
             } catch (_: Exception) { }
             tokenManager.clearUserId()
             tokenManager.clearToken()

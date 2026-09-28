@@ -18,6 +18,10 @@ interface UserDao {
     @Query("SELECT * FROM user_table LIMIT 1")
     fun getUserFlow(): Flow<UserEntity?>
 
+    // Used by UserRepositoryImpl.getProfileFlow() — filters by active user's deviceId
+    @Query("SELECT * FROM user_table WHERE deviceId = :deviceId LIMIT 1")
+    fun getUserFlowByDeviceId(deviceId: String): Flow<UserEntity?>
+
     @Query("SELECT * FROM user_table LIMIT 1")
     suspend fun getAnyUser(): UserEntity?
 

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.presentation.viewmodel.AuthUiState
 import com.example.gymfitness.presentation.viewmodel.AuthViewModel
 import com.example.gymfitness.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun GetStart(
@@ -174,10 +176,14 @@ fun GetStart(
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        val scope = rememberCoroutineScope()
                         OutlinedButton(
                             onClick = {
-                                authViewModel.signInAsGuest()
-                                navController.navigate(Screen.Onboarding.createRoute())
+                                scope.launch {
+                                    authViewModel.signInAsGuest()
+                                    navController.navigate(Screen.Onboarding.createRoute())
+                                }
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = InkBlack),
                             border = BorderStroke(1.dp, StrokeSoft),

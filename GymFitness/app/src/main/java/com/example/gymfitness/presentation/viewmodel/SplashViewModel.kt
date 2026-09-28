@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymfitness.data.local.dao.UserDao
+import com.example.gymfitness.presentation.navigation.Screen
 import com.example.gymfitness.utils.TokenManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -29,10 +30,10 @@ class SplashViewModel @Inject constructor(
         viewModelScope.launch {
             val user = userDao.getUserById(userId)
             if (user != null) {
-                _startDestination.value = "home"
+                _startDestination.value = Screen.Home.route
             } else {
-                _startDestination.value = "onboarding"
+                _startDestination.value = Screen.GetStart.route
             }
         }
     }
-}
+}

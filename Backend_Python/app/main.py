@@ -123,11 +123,6 @@ app.include_router(meal.router, prefix="/api/meals", tags=["Meals"], dependencie
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"], dependencies=[Depends(verify_jwt)])
 app.include_router(food_scanner.router, tags=["Food Vision Scanner"], dependencies=[Depends(verify_jwt)])
 
-@app.get("/", tags=["Health"])
-@app.get("/health", tags=["Health"])
-async def root_health_check():
-    return {"status": "healthy", "service": "Pulse API", "version": "2.0"}
-
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)

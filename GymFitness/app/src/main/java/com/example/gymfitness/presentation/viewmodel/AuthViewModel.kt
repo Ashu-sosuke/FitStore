@@ -189,17 +189,18 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Initializes a backend JWT session for guest users using their device ID.
+     * Returns true if the JWT was obtained, false otherwise.
      */
-    fun signInAsGuest() {
-        viewModelScope.launch {
-            val guestId = tokenManager.getUserId()
-            try {
-                val authResponse = authApi.getAccessToken(AuthRequestDto(deviceId = guestId))
-                tokenManager.saveToken(authResponse.access_token)
-                Log.d("AUTH", "Guest backend JWT token obtained successfully")
-            } catch (e: Exception) {
-                Log.w("AUTH", "Failed to obtain guest JWT token: ${e.localizedMessage}")
-            }
+    suspend fun signInAsGuest(): Boolean {
+        val guestId = tokenManager.getUserId()
+        return try {
+            val authResponse = authApi.getAccessToken(AuthRequestDto(deviceId = guestId))
+            tokenManager.saveToken(authResponse.access_token)
+            Log.d("AUTH", "Guest backend JWT token obtained successfully")
+            true
+        } catch (e: Exception) {
+            Log.w("AUTH", "Failed to obtain guest JWT token: ${e.localizedMessage}")
+            false
         }
     }
 }

@@ -163,6 +163,8 @@ async def scan_food(
             logged_at=now_iso
         )
 
+    except HTTPException:
+        raise  # Re-raise 400/413 errors as-is instead of masking them as 500
     except Exception as e:
         logger.error(f"Error in scan-food: {e}")
         raise HTTPException(status_code=500, detail="Food scanning failed. Please try again.")

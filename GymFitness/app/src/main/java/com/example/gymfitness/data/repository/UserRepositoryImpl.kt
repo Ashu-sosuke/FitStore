@@ -43,7 +43,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun getProfileFlow(deviceId: String): Flow<UserProfile?> {
-        return userDao.getUserFlow().map { it?.toDomain() }
+        return userDao.getUserFlowByDeviceId(deviceId).map { it?.toDomain() }
     }
 
     override suspend fun syncProfile(deviceId: String): Result<UserProfile> {

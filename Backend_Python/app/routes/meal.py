@@ -23,16 +23,32 @@ async def add_meal(meal: MealCreate = Body(...)):
     created_meal["_id"] = str(created_meal["_id"])
     return created_meal
 
-@router.get("/{device_id}", response_description="List all meals for a device", response_model=List[Meal])
-async def list_meals(device_id: str, limit: int = 20, skip: int = 0):
-    meals = await meals_collection.find({"deviceId": device_id})\
-        .sort("createdAt", -1)\
-        .skip(skip)\
-        .limit(limit)\
-        .to_list(limit)
-    for m in meals:
-        m["_id"] = str(m["_id"])
-    return meals
+# Static-path routes MUST be defined before parameterized routes to avoid
+# FastAPI matching literal segments (e.g. "search-food") as {device_id}.
+
+@router.get("/search-food", response_description="Search for food items in the database", response_model=List[Nutrient])
+async def search_food(query: str = Query(..., min_length=1)):
+    # Case-insensitive regex search in nutrients collection
+    safe_query = re.escape(query)
+    foods = await nutrients_collection.find({"food_name": {"$regex": safe_query, "$options": "i"}}).to_list(10)
+    for f in foods:
+        f["_id"] = str(f["_id"])
+    return foods
+
+@router.post("/add-food", response_description="Add a new custom food item to the database", response_model=Nutrient, status_code=status.HTTP_201_CREATED)
+async def add_custom_food(food: NutrientCreate = Body(...)):
+    # Check if a food with the same name exists (case-insensitive)
+    safe_name = re.escape(food.food_name)
+    existing = await nutrients_collection.find_one({"food_name": {"$regex": f"^{safe_name}$", "$options": "i"}})
+    if existing:
+        existing["_id"] = str(existing["_id"])
+        return existing
+
+    new_food = food.dict()
+    result = await nutrients_collection.insert_one(new_food)
+    created = await nutrients_collection.find_one({"_id": result.inserted_id})
+    created["_id"] = str(created["_id"])
+    return created
 
 @router.get("/summary/{device_id}", response_description="Get daily nutrition summary")
 async def get_daily_summary(device_id: str):
@@ -62,26 +78,13 @@ async def get_daily_summary(device_id: str):
         }
     return result[0]
 
-@router.get("/search-food", response_description="Search for food items in the database", response_model=List[Nutrient])
-async def search_food(query: str = Query(..., min_length=1)):
-    # Case-insensitive regex search in nutrients collection
-    safe_query = re.escape(query)
-    foods = await nutrients_collection.find({"food_name": {"$regex": safe_query, "$options": "i"}}).to_list(10)
-    for f in foods:
-        f["_id"] = str(f["_id"])
-    return foods
-
-@router.post("/add-food", response_description="Add a new custom food item to the database", response_model=Nutrient, status_code=status.HTTP_201_CREATED)
-async def add_custom_food(food: NutrientCreate = Body(...)):
-    # Check if a food with the same name exists (case-insensitive)
-    safe_name = re.escape(food.food_name)
-    existing = await nutrients_collection.find_one({"food_name": {"$regex": f"^{safe_name}$", "$options": "i"}})
-    if existing:
-        existing["_id"] = str(existing["_id"])
-        return existing
-
-    new_food = food.dict()
-    result = await nutrients_collection.insert_one(new_food)
-    created = await nutrients_collection.find_one({"_id": result.inserted_id})
-    created["_id"] = str(created["_id"])
-    return created
+@router.get("/{device_id}", response_description="List all meals for a device", response_model=List[Meal])
+async def list_meals(device_id: str, limit: int = 20, skip: int = 0):
+    meals = await meals_collection.find({"deviceId": device_id})\
+        .sort("createdAt", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(limit)
+    for m in meals:
+        m["_id"] = str(m["_id"])
+    return meals
