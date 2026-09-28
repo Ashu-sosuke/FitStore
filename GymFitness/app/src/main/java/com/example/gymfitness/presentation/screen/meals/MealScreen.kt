@@ -181,6 +181,32 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     }
                 }
 
+                // Bottom Action: Snap & Scan Button
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 36.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            // Manual shutter triggers immediate scan
+                        },
+                        enabled = !isAnalyzing,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SunsetOrange,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier
+                            .height(52.dp)
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Hold Steady or Tap to Scan", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+
                 // Controls
                 Row(
                     modifier = Modifier

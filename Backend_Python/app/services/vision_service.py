@@ -349,22 +349,28 @@ class VisionService:
 
     async def _call_gemini_vision(self, image_bytes: bytes, api_key: str) -> Optional[VisionResult]:
         """
-        Calls Google Gemini 1.5 Flash Vision API with structured JSON output schema.
+        Calls Google Gemini Vision API (1.5 Flash / 2.0 Flash) with structured JSON output schema.
         """
+        import re
         b64_image = base64.b64encode(image_bytes).decode("utf-8")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         
+        models_to_try = [
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-latest"
+        ]
+
         prompt = (
             "You are an expert Indian food nutritionist and computer vision system. "
-            "Analyze this image carefully. "
+            "Analyze this image carefully. Identify the food accurately (e.g., Dal Tadka, Paneer Butter Masala, Roti, Chicken Biryani, Idli, Dosa, Rice, Rajma, Chole, Poha, Samosa, Egg Curry, etc.). "
             "Respond ONLY with a valid JSON object matching this schema without markdown fences:\n"
             "{\n"
             '  "is_food": true/false,\n'
-            '  "primary_food_name": "Standard Indian food or dish name (e.g., Dal Tadka, Paneer Butter Masala, Roti, Chicken Biryani, Idli, Dosa, Rice)",\n'
+            '  "primary_food_name": "Exact Indian food or dish name",\n'
             '  "cuisine": "Indian" or other,\n'
             '  "estimated_grams": total estimated weight in grams (number),\n'
             '  "confidence": float between 0.0 and 1.0,\n'
-            '  "items": [{"name": "Specific food item name", "estimated_grams": number}],\n'
+            '  "items": [{"name": "Specific component food name", "estimated_grams": number}],\n'
             '  "top_alternatives": ["alternative dish 1", "alternative dish 2", "alternative dish 3"]\n'
             "}\n"
             "CRITICAL: Do NOT estimate or return calories or macros. ONLY identify the food items and portion weights."
@@ -390,17 +396,26 @@ class VisionService:
             }
         }
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(url, json=payload)
-            if resp.status_code == 200:
-                data = resp.json()
-                text_content = data["candidates"][0]["content"]["parts"][0]["text"]
-                parsed = json.loads(text_content)
-                parsed["vision_provider"] = "gemini_vlm"
-                return VisionResult(**parsed)
-            else:
-                logger.warning(f"Gemini API returned status {resp.status_code}: {resp.text}")
-                return None
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            for model_name in models_to_try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                try:
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        # Clean any surrounding markdown fences
+                        text_content = re.sub(r"^```(?:json)?\s*", "", text_content)
+                        text_content = re.sub(r"\s*```$", "", text_content)
+                        parsed = json.loads(text_content)
+                        parsed["vision_provider"] = f"gemini_{model_name}"
+                        return VisionResult(**parsed)
+                    else:
+                        logger.warning(f"Gemini model {model_name} returned status {resp.status_code}: {resp.text}")
+                except Exception as model_err:
+                    logger.warning(f"Error calling {model_name}: {model_err}")
+
+        return None
 
     async def _call_openai_vision(self, image_bytes: bytes, api_key: str) -> Optional[VisionResult]:
         """
