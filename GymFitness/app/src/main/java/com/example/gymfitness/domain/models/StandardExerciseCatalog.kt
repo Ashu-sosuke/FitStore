@@ -2,44 +2,53 @@ package com.example.gymfitness.domain.models
 
 object StandardExerciseCatalog {
     val exercises = listOf(
-        // CHEST
-        CatalogExercise("chest_1", "Barbell Bench Press", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PUSH), 4, 8),
-        CatalogExercise("chest_2", "Incline Dumbbell Press", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS), listOf(SplitType.UPPER, SplitType.PUSH), 3, 10),
-        CatalogExercise("chest_3", "Bodyweight Push-Ups", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS, MuscleGroup.ABS_CORE), listOf(SplitType.FULL_BODY, SplitType.PUSH), 3, 15),
-        CatalogExercise("chest_4", "Chest Dips", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS), listOf(SplitType.UPPER, SplitType.PUSH), 3, 10),
-        CatalogExercise("chest_5", "Cable Pec Fly", MuscleGroup.CHEST, emptyList(), listOf(SplitType.PUSH), 3, 12),
+        // CHEST / PECTORALS
+        CatalogExercise("3TZduzM", "Barbell Incline Bench Press", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PUSH), 4, 8),
+        CatalogExercise("5v7KYld", "Smith Incline Bench Press", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS), listOf(SplitType.UPPER, SplitType.PUSH), 3, 10),
+        CatalogExercise("7saC5zz", "Cable Decline Fly", MuscleGroup.CHEST, emptyList(), listOf(SplitType.PUSH), 3, 12),
+        CatalogExercise("8eqjhOl", "Dumbbell Palms-In Incline Press", MuscleGroup.CHEST, listOf(MuscleGroup.TRICEPS), listOf(SplitType.UPPER, SplitType.PUSH), 3, 10),
 
-        // BACK
-        CatalogExercise("back_1", "Pull-Ups / Lat Pulldown", MuscleGroup.BACK, listOf(MuscleGroup.BICEPS), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PULL), 4, 8),
-        CatalogExercise("back_2", "Barbell Bent-Over Row", MuscleGroup.BACK, listOf(MuscleGroup.BICEPS), listOf(SplitType.UPPER, SplitType.PULL), 3, 10),
-        CatalogExercise("back_3", "Conventional Deadlift", MuscleGroup.BACK, listOf(MuscleGroup.HAMSTRINGS, MuscleGroup.GLUTES), listOf(SplitType.FULL_BODY, SplitType.PULL), 3, 5),
-        CatalogExercise("back_4", "Seated Cable Row", MuscleGroup.BACK, listOf(MuscleGroup.BICEPS), listOf(SplitType.PULL), 3, 12),
-        CatalogExercise("back_5", "Face Pulls", MuscleGroup.BACK, listOf(MuscleGroup.SHOULDERS), listOf(SplitType.PULL), 3, 15),
+        // BACK / LATS / UPPER BACK
+        CatalogExercise("7F1DVzn", "Lever Front Pulldown", MuscleGroup.BACK, listOf(MuscleGroup.BICEPS), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PULL), 4, 8),
+        CatalogExercise("7I6LNUG", "Lever Seated Row", MuscleGroup.BACK, listOf(MuscleGroup.BICEPS), listOf(SplitType.UPPER, SplitType.PULL), 3, 10),
+        CatalogExercise("8urJS9b", "Weighted Hyperextension (Stability Ball)", MuscleGroup.BACK, listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS), listOf(SplitType.FULL_BODY, SplitType.PULL), 3, 12),
 
-        // SHOULDERS
-        CatalogExercise("sh_1", "Overhead Barbell Press", MuscleGroup.SHOULDERS, listOf(MuscleGroup.TRICEPS), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PUSH), 4, 8),
-        CatalogExercise("sh_2", "Dumbbell Lateral Raises", MuscleGroup.SHOULDERS, emptyList(), listOf(SplitType.UPPER, SplitType.PUSH), 4, 12),
-        CatalogExercise("sh_3", "Reverse Cable Fly", MuscleGroup.SHOULDERS, listOf(MuscleGroup.BACK), listOf(SplitType.PULL), 3, 15),
+        // SHOULDERS / DELTS
+        CatalogExercise("3eGE2JC", "Dumbbell Front Raise", MuscleGroup.SHOULDERS, emptyList(), listOf(SplitType.FULL_BODY, SplitType.UPPER, SplitType.PUSH), 3, 12),
+        CatalogExercise("6cKQC5E", "Dumbbell One-Arm Upright Row", MuscleGroup.SHOULDERS, listOf(MuscleGroup.BACK), listOf(SplitType.UPPER, SplitType.PULL), 3, 10),
 
-        // BICEPS & TRICEPS
-        CatalogExercise("arm_1", "Barbell Bicep Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 10),
-        CatalogExercise("arm_2", "Dumbbell Hammer Curls", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 12),
-        CatalogExercise("arm_3", "Tricep Rope Pushdown", MuscleGroup.TRICEPS, emptyList(), listOf(SplitType.PUSH), 3, 12),
-        CatalogExercise("arm_4", "Skull Crushers", MuscleGroup.TRICEPS, emptyList(), listOf(SplitType.PUSH), 3, 10),
+        // BICEPS
+        CatalogExercise("3XFdb1Z", "Cable Squatting Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 10),
+        CatalogExercise("4dF3maG", "Dumbbell One-Arm Hammer Preacher Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 12),
+        CatalogExercise("4dUn2iv", "Barbell Standing Close-Grip Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 10),
+        CatalogExercise("6sMAmNv", "Dumbbell Reverse Spider Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 12),
+        CatalogExercise("7inpWch", "Dumbbell Standing Concentration Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 12),
+        CatalogExercise("8oYqOt9", "Cable Seated Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 12),
 
-        // QUADS & HAMSTRINGS & GLUTES & CALVES
-        CatalogExercise("leg_1", "Barbell Back Squat", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS), listOf(SplitType.FULL_BODY, SplitType.LOWER, SplitType.LEGS), 4, 8),
-        CatalogExercise("leg_2", "Leg Press", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES), listOf(SplitType.LOWER, SplitType.LEGS), 3, 12),
-        CatalogExercise("leg_3", "Romanian Deadlift (RDL)", MuscleGroup.HAMSTRINGS, listOf(MuscleGroup.GLUTES), listOf(SplitType.FULL_BODY, SplitType.LOWER, SplitType.LEGS), 3, 10),
-        CatalogExercise("leg_4", "Lying Leg Curl", MuscleGroup.HAMSTRINGS, emptyList(), listOf(SplitType.LEGS), 3, 12),
-        CatalogExercise("leg_5", "Barbell Hip Thrust", MuscleGroup.GLUTES, listOf(MuscleGroup.HAMSTRINGS), listOf(SplitType.LOWER, SplitType.LEGS), 4, 10),
-        CatalogExercise("leg_6", "Walking Dumbbell Lunges", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES), listOf(SplitType.LEGS), 3, 12),
-        CatalogExercise("leg_7", "Standing Calf Raise", MuscleGroup.CALVES, emptyList(), listOf(SplitType.LOWER, SplitType.LEGS), 4, 15),
+        // TRICEPS
+        CatalogExercise("05Cf2v8", "Impossible Dips", MuscleGroup.TRICEPS, listOf(MuscleGroup.CHEST), listOf(SplitType.UPPER, SplitType.PUSH), 3, 10),
+        CatalogExercise("5uFK1xr", "Barbell Seated Overhead Triceps Extension", MuscleGroup.TRICEPS, emptyList(), listOf(SplitType.PUSH), 3, 12),
+        CatalogExercise("6MfS53i", "Dumbbell Lying Single Arm Extension", MuscleGroup.TRICEPS, emptyList(), listOf(SplitType.PUSH), 3, 12),
 
-        // ABS & CORE
-        CatalogExercise("core_1", "Plank Hold", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.FULL_BODY, SplitType.CARDIO, SplitType.MOBILITY_YOGA), 3, 60),
-        CatalogExercise("core_2", "Hanging Leg Raises", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.FULL_BODY, SplitType.LEGS), 3, 12),
-        CatalogExercise("core_3", "Cable Kneeling Crunch", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.PUSH), 3, 15)
+        // FOREARMS
+        CatalogExercise("3tAXPQ6", "Dumbbell Over Bench Reverse Wrist Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 15),
+        CatalogExercise("6kSxYnw", "Barbell Wrist Curl", MuscleGroup.BICEPS, emptyList(), listOf(SplitType.PULL), 3, 15),
+
+        // LEGS / QUADS / GLUTES / HAMSTRINGS
+        CatalogExercise("2Qh2J1e", "Sled 45° Leg Press", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES, MuscleGroup.HAMSTRINGS), listOf(SplitType.FULL_BODY, SplitType.LOWER, SplitType.LEGS), 4, 10),
+        CatalogExercise("5bpPTHv", "Kettlebell Pistol Squat", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES), listOf(SplitType.LOWER, SplitType.LEGS), 3, 8),
+        CatalogExercise("7zdxRTl", "Smith Machine Leg Press", MuscleGroup.QUADS, listOf(MuscleGroup.GLUTES), listOf(SplitType.LOWER, SplitType.LEGS), 3, 12),
+        CatalogExercise("6sYyrRX", "Bent Knee Lying Twist", MuscleGroup.GLUTES, listOf(MuscleGroup.ABS_CORE), listOf(SplitType.LOWER, SplitType.LEGS), 3, 15),
+
+        // CALVES
+        CatalogExercise("2ORFMoR", "Hack Machine Calf Raise", MuscleGroup.CALVES, emptyList(), listOf(SplitType.LOWER, SplitType.LEGS), 4, 15),
+        CatalogExercise("6HiHHe0", "Barbell Standing Rocking Leg Calf Raise", MuscleGroup.CALVES, emptyList(), listOf(SplitType.LOWER, SplitType.LEGS), 3, 15),
+        CatalogExercise("8ozhUIZ", "Barbell Standing Calf Raise", MuscleGroup.CALVES, emptyList(), listOf(SplitType.LOWER, SplitType.LEGS), 4, 15),
+
+        // ABS / CORE
+        CatalogExercise("6bOA1Oi", "Weighted Side Bend (Stability Ball)", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.FULL_BODY, SplitType.LEGS), 3, 15),
+        CatalogExercise("8K0w2yA", "Assisted Hanging Knee Raise", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.FULL_BODY, SplitType.LEGS), 3, 12),
+        CatalogExercise("8xUv4J7", "Cable Seated Crunch", MuscleGroup.ABS_CORE, emptyList(), listOf(SplitType.FULL_BODY, SplitType.PUSH), 3, 15)
     )
 
     fun getExercisesForSplit(splitType: SplitType): List<CatalogExercise> {

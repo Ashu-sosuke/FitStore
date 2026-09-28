@@ -1,33 +1,20 @@
 import io
 import os
-import json
-import re
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from app.database import db
+from app.services.nutrition_engine import nutrition_engine
+from app.services.vision_service import vision_service
+from app.security import verify_jwt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Nutrient Fallback Database
-FALLBACK_NUTRIENTS = {
-    "Egg": {"calories": 155.0, "protein_g": 13.0, "carbs_g": 1.1, "fats_g": 11.0},
-    "Chicken": {"calories": 165.0, "protein_g": 31.0, "carbs_g": 0.0, "fats_g": 3.6},
-    "Milk": {"calories": 42.0, "protein_g": 3.4, "carbs_g": 5.0, "fats_g": 1.0},
-    "Broccoli": {"calories": 34.0, "protein_g": 2.8, "carbs_g": 6.6, "fats_g": 0.4},
-    "Avocado": {"calories": 160.0, "protein_g": 2.0, "carbs_g": 8.5, "fats_g": 14.7},
-    "Salmon": {"calories": 208.0, "protein_g": 20.0, "carbs_g": 0.0, "fats_g": 13.0},
-    "Rice": {"calories": 130.0, "protein_g": 2.7, "carbs_g": 28.0, "fats_g": 0.3},
-    "Apple": {"calories": 52.0, "protein_g": 0.3, "carbs_g": 14.0, "fats_g": 0.2},
-    "Banana": {"calories": 89.0, "protein_g": 1.1, "carbs_g": 23.0, "fats_g": 0.3},
-    "Oats": {"calories": 389.0, "protein_g": 16.9, "carbs_g": 66.3, "fats_g": 6.9},
-}
 
 class MacrosResponse(BaseModel):
     protein_g: float
@@ -35,53 +22,50 @@ class MacrosResponse(BaseModel):
     fats_g: float
     calories: float
 
+class FoodItemBreakdown(BaseModel):
+    name: str
+    matched_name: str
+    grams: float
+    calories: float
+    protein_g: float
+    carbs_g: float
+    fats_g: float
+    source: str = "IFCT_2017"
+
 class ScanFoodResponse(BaseModel):
     success: bool
+    is_food: bool = True
     food_name: str
+    cuisine: str = "Indian"
+    estimated_grams: float
     calories: float
     macros: MacrosResponse
+    items: List[FoodItemBreakdown] = Field(default_factory=list)
+    top_alternatives: List[str] = Field(default_factory=list)
     confidence: float
+    source: str = "IFCT_2017"
+    vision_provider: str = "local_classifier"
+    scan_id: Optional[str] = None
     logged_at: str
 
-# Try importing torch/torchvision if installed
-_model = None
-_preprocess = None
-_FOOD_LABELS = list(FALLBACK_NUTRIENTS.keys())
+class ScanFeedbackRequest(BaseModel):
+    scan_id: Optional[str] = None
+    predicted_food: str
+    corrected_food: str
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
+    comments: Optional[str] = None
 
-try:
-    import torch
-    import torch.nn as nn
-    from PIL import Image
-    from torchvision import models, transforms
-
-    weights_path = Path(__file__).resolve().parent.parent.parent / "food-analyser" / "weights" / "food_mobilenetv2.pth"
-    if weights_path.exists():
-        _preprocess = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        _model = models.mobilenet_v2(weights=None)
-        in_features = _model.classifier[1].in_features
-        _model.classifier = nn.Sequential(
-            nn.Dropout(p=0.3),
-            nn.Linear(in_features, 256),
-            nn.ReLU(),
-            nn.Dropout(p=0.2),
-            nn.Linear(256, len(_FOOD_LABELS)),
-        )
-        state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
-        _model.load_state_dict(state_dict)
-        _model.eval()
-        logger.info("[OK] MobileNetV2 PyTorch food model loaded successfully.")
-except Exception as e:
-    logger.info(f"[INFO] Running lightweight food analyzer pipeline: {e}")
 
 @router.post("/scan-food", response_model=ScanFoodResponse)
 async def scan_food(
     file: UploadFile = File(...),
-    x_user_id: str = Header(default="anonymous", alias="X-User-Id")
+    quantity_override_grams: Optional[float] = Form(None),
+    user_id: str = Depends(verify_jwt)
 ):
+    """
+    Analyzes uploaded food image, classifies food items (single or multi-dish plate),
+    and strictly derives certified nutritional data from the IFCT 2017 Nutrition Engine.
+    """
     try:
         image_bytes = await file.read()
         if len(image_bytes) == 0:
@@ -89,82 +73,143 @@ async def scan_food(
         if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
             raise HTTPException(status_code=413, detail="Image too large. Maximum size is 10MB.")
 
-        predicted_food = "Chicken"
-        confidence = 0.94
-
-        # If PyTorch model is loaded, perform forward pass
-        if _model is not None and _preprocess is not None:
-            try:
-                from PIL import Image
-                import torch
-                img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                tensor = _preprocess(img).unsqueeze(0)
-                with torch.no_grad():
-                    logits = _model(tensor)
-                    probs = torch.softmax(logits, dim=1).squeeze(0)
-                    top_idx = int(torch.argmax(probs).item())
-                    confidence = float(probs[top_idx].item())
-                    if top_idx < len(_FOOD_LABELS):
-                        predicted_food = _FOOD_LABELS[top_idx]
-            except Exception as e:
-                logger.warning(f"Inference error, using heuristic fallback: {e}")
-
-        # Lookup nutrients from MongoDB
-        nutrient_doc = None
-        try:
-            safe_food = re.escape(predicted_food)
-            nutrient_doc = await db["nutrients"].find_one({"name": {"$regex": f"^{safe_food}$", "$options": "i"}})
-        except Exception:
-            pass
-
-        if nutrient_doc:
-            nutrients = {
-                "calories": float(nutrient_doc.get("calories", 150)),
-                "protein_g": float(nutrient_doc.get("protein", 10)),
-                "carbs_g": float(nutrient_doc.get("carbs", 10)),
-                "fats_g": float(nutrient_doc.get("fat", 5)),
-            }
-        else:
-            nutrients = FALLBACK_NUTRIENTS.get(predicted_food, {
-                "calories": 150.0,
-                "protein_g": 12.0,
-                "carbs_g": 10.0,
-                "fats_g": 5.0
-            })
-
+        # 1. Run Vision Analysis (Preprocessing, Hash Caching, VLM / Classifier)
+        vision_res = await vision_service.analyze_image(image_bytes)
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        # Log entry in daily_logs
+        if not vision_res.is_food:
+            return ScanFoodResponse(
+                success=True,
+                is_food=False,
+                food_name="No Food Detected",
+                cuisine="Unknown",
+                estimated_grams=0.0,
+                calories=0.0,
+                macros=MacrosResponse(protein_g=0.0, carbs_g=0.0, fats_g=0.0, calories=0.0),
+                items=[],
+                top_alternatives=[],
+                confidence=vision_res.confidence,
+                source="IFCT_2017",
+                vision_provider=vision_res.vision_provider,
+                logged_at=now_iso
+            )
+
+        # 2. Process Detected Items & Retrieve Certified IFCT 2017 Nutrition
+        item_breakdowns: List[FoodItemBreakdown] = []
+        total_calories = 0.0
+        total_protein = 0.0
+        total_carbs = 0.0
+        total_fats = 0.0
+
+        # If quantity_override_grams provided by user and single item, apply override
+        items_to_process = vision_res.items or [{"name": vision_res.primary_food_name, "estimated_grams": vision_res.estimated_grams}]
+        if quantity_override_grams is not None and quantity_override_grams > 0:
+            if len(items_to_process) == 1:
+                items_to_process[0].estimated_grams = quantity_override_grams
+
+        for raw_item in items_to_process:
+            grams = raw_item.estimated_grams if hasattr(raw_item, "estimated_grams") else raw_item.get("estimated_grams", 100.0)
+            item_name = raw_item.name if hasattr(raw_item, "name") else raw_item.get("name", vision_res.primary_food_name)
+            
+            # Authoritative Nutrition Lookup strictly from IFCT 2017
+            nut_res = nutrition_engine.get_nutrition(food_query=item_name, grams=float(grams))
+            
+            breakdown = FoodItemBreakdown(
+                name=item_name,
+                matched_name=nut_res.matched_name if nut_res.success else item_name,
+                grams=round(grams, 1),
+                calories=nut_res.calories,
+                protein_g=nut_res.macros.protein_g,
+                carbs_g=nut_res.macros.carbs_g,
+                fats_g=nut_res.macros.fats_g,
+                source=nut_res.source
+            )
+            item_breakdowns.append(breakdown)
+            total_calories += nut_res.calories
+            total_protein += nut_res.macros.protein_g
+            total_carbs += nut_res.macros.carbs_g
+            total_fats += nut_res.macros.fats_g
+
+        primary_food = vision_res.primary_food_name
+        if len(item_breakdowns) == 1 and item_breakdowns[0].matched_name:
+            primary_food = item_breakdowns[0].matched_name
+
+        # 3. Log Entry in daily_logs with verified user_id
+        inserted_id_str = None
         try:
-            await db["daily_logs"].insert_one({
-                "userId": x_user_id,
-                "foodName": predicted_food,
-                "calories": nutrients["calories"],
-                "protein_g": nutrients["protein_g"],
-                "carbs_g": nutrients["carbs_g"],
-                "fats_g": nutrients["fats_g"],
-                "timestamp": now_iso,
-                "confidence": confidence
-            })
-        except Exception:
-            pass
+            log_doc = {
+                "userId": user_id,
+                "foodName": primary_food,
+                "cuisine": vision_res.cuisine,
+                "calories": round(total_calories, 1),
+                "protein_g": round(total_protein, 1),
+                "carbs_g": round(total_carbs, 1),
+                "fats_g": round(total_fats, 1),
+                "items": [item.model_dump() for item in item_breakdowns],
+                "source": "IFCT_2017",
+                "visionProvider": vision_res.vision_provider,
+                "confidence": vision_res.confidence,
+                "timestamp": now_iso
+            }
+            insert_result = await db["daily_logs"].insert_one(log_doc)
+            inserted_id_str = str(insert_result.inserted_id)
+        except Exception as e:
+            logger.warning(f"Failed to log scan entry: {e}")
 
         return ScanFoodResponse(
             success=True,
-            food_name=predicted_food,
-            calories=nutrients["calories"],
+            is_food=True,
+            food_name=primary_food,
+            cuisine=vision_res.cuisine,
+            estimated_grams=round(sum(b.grams for b in item_breakdowns), 1),
+            calories=round(total_calories, 1),
             macros=MacrosResponse(
-                protein_g=nutrients["protein_g"],
-                carbs_g=nutrients["carbs_g"],
-                fats_g=nutrients["fats_g"],
-                calories=nutrients["calories"]
+                protein_g=round(total_protein, 1),
+                carbs_g=round(total_carbs, 1),
+                fats_g=round(total_fats, 1),
+                calories=round(total_calories, 1)
             ),
-            confidence=round(confidence, 2),
+            items=item_breakdowns,
+            top_alternatives=vision_res.top_alternatives,
+            confidence=round(vision_res.confidence, 2),
+            source="IFCT_2017",
+            vision_provider=vision_res.vision_provider,
+            scan_id=inserted_id_str,
             logged_at=now_iso
         )
 
     except HTTPException:
-        raise  # Re-raise 400/413 errors as-is instead of masking them as 500
+        raise
     except Exception as e:
         logger.error(f"Error in scan-food: {e}")
         raise HTTPException(status_code=500, detail="Food scanning failed. Please try again.")
+
+
+@router.post("/api/scan/feedback")
+@router.post("/api/scan-feedback")
+async def record_scan_feedback(
+    feedback: ScanFeedbackRequest,
+    user_id: str = Depends(verify_jwt)
+):
+    """
+    Stores user corrections and feedback for continuous vision and nutrition refinement.
+    """
+    try:
+        feedback_doc = {
+            "userId": user_id,
+            "scanId": feedback.scan_id,
+            "predictedFood": feedback.predicted_food,
+            "correctedFood": feedback.corrected_food,
+            "rating": feedback.rating,
+            "comments": feedback.comments,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        try:
+            await db["scan_feedback"].insert_one(feedback_doc)
+        except Exception as db_err:
+            logger.warning(f"Failed to insert scan feedback to MongoDB: {db_err}")
+
+        return {"success": True, "message": "Feedback recorded successfully. Thank you!"}
+    except Exception as e:
+        logger.error(f"Error recording feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save scan feedback.")

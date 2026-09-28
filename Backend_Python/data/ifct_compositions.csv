@@ -1,0 +1,121 @@
+code,name,scientific_name,group,energy_kj,protein_g,fat_g,carbs_g,fiber_g
+A001,Rice raw milled,Oryza sativa,Cereals and Millets,1491,6.81,0.52,78.24,0.20
+A002,Rice parboiled,Oryza sativa,Cereals and Millets,1473,7.94,0.54,77.16,0.30
+A003,Wheat whole,Triticum aestivum,Cereals and Millets,1343,10.59,1.47,64.72,11.23
+A004,Wheat flour (Atta),Triticum aestivum,Cereals and Millets,1338,10.57,1.60,64.08,11.36
+A005,Refined wheat flour (Maida),Triticum aestivum,Cereals and Millets,1477,10.33,0.77,73.93,2.80
+A006,Semolina (Suji / Rava),Triticum aestivum,Cereals and Millets,1468,10.43,0.80,72.80,3.90
+A007,Rice flakes (Poha / Aval),Oryza sativa,Cereals and Millets,1479,6.56,1.10,77.30,0.70
+A008,Rice puffed (Murmura),Oryza sativa,Cereals and Millets,1386,7.50,0.10,73.60,0.30
+A009,Pearl millet (Bajra),Pennisetum glaucum,Cereals and Millets,1456,10.96,5.43,61.78,11.49
+A010,Sorghum (Jowar),Sorghum bicolor,Cereals and Millets,1406,9.97,1.73,67.68,10.22
+A011,Finger millet (Ragi),Eleusine coracana,Cereals and Millets,1342,7.16,1.92,66.82,11.18
+A012,Maize / Corn flour,Zea mays,Cereals and Millets,1445,8.83,1.23,72.41,2.70
+A013,Oats,Avena sativa,Cereals and Millets,1565,13.66,6.90,62.80,10.60
+A014,Barley (Jau),Hordeum vulgare,Cereals and Millets,1325,10.90,1.30,61.30,15.60
+A015,Quinoa,Chenopodium quinoa,Cereals and Millets,1539,14.12,6.07,64.16,7.00
+B001,Red gram split (Toor dal / Arhar dal),Cajanus cajan,Grain Legumes / Pulses,1407,22.30,1.49,57.60,9.10
+B002,Bengal gram split (Chana dal),Cicer arietinum,Grain Legumes / Pulses,1498,20.80,5.60,55.40,15.30
+B003,Bengal gram whole (Kala chana),Cicer arietinum,Grain Legumes / Pulses,1377,17.10,5.30,50.90,25.20
+B004,Chickpeas Kabuli (Safed chana),Cicer arietinum,Grain Legumes / Pulses,1506,20.47,6.04,54.80,17.40
+B005,Bengal gram flour (Besan),Cicer arietinum,Grain Legumes / Pulses,1530,22.39,5.20,53.50,10.80
+B006,Green gram split (Moong dal),Vigna radiata,Grain Legumes / Pulses,1418,24.00,1.15,56.70,8.20
+B007,Green gram whole (Sabut moong),Vigna radiata,Grain Legumes / Pulses,1380,23.86,1.15,54.30,16.30
+B008,Black gram split (Urad dal),Vigna mungo,Grain Legumes / Pulses,1423,24.00,1.40,56.60,9.80
+B009,Black gram whole (Sabut urad),Vigna mungo,Grain Legumes / Pulses,1410,22.30,1.40,54.00,18.30
+B010,Lentil red split (Masoor dal),Lens culinaris,Grain Legumes / Pulses,1435,25.10,0.70,59.00,7.90
+B011,Kidney beans (Rajma),Phaseolus vulgaris,Grain Legumes / Pulses,1397,22.90,1.30,56.80,24.90
+B012,Cowpea (Lobia / Chawli),Vigna unguiculata,Grain Legumes / Pulses,1393,24.10,1.00,54.50,10.70
+B013,Soybean brown/yellow,Glycine max,Grain Legumes / Pulses,1807,36.49,19.94,20.90,9.30
+B014,Soya chunks (Textured soy protein),Glycine max,Grain Legumes / Pulses,1443,52.00,0.50,33.00,13.00
+B015,Green peas dry (Matar),Pisum sativum,Grain Legumes / Pulses,1318,19.70,1.10,56.50,16.70
+C001,Potato (Aloo),Solanum tuberosum,Vegetables,406,1.60,0.10,20.90,1.70
+C002,Onion (Pyaz),Allium cepa,Vegetables,205,1.20,0.10,10.30,1.70
+C003,Tomato (Tamatar),Solanum lycopersicum,Vegetables,80,0.90,0.20,3.60,1.20
+C004,Cauliflower (Phool gobi),Brassica oleracea var. botrytis,Vegetables,105,2.00,0.10,4.00,2.00
+C005,Cabbage (Patta gobi),Brassica oleracea var. capitata,Vegetables,113,1.80,0.10,4.60,2.50
+C006,Spinach (Palak),Spinacia oleracea,Vegetables,109,2.00,0.70,2.90,2.20
+C007,Fenugreek leaves (Methi),Trigonella foenum-graecum,Vegetables,205,4.40,0.90,6.00,4.90
+C008,Okra / Ladyfinger (Bhindi),Abelmoschus esculentus,Vegetables,146,1.90,0.20,6.40,3.20
+C009,Bitter gourd (Karela),Momordica charantia,Vegetables,105,1.60,0.20,4.20,2.80
+C010,Bottle gourd (Lauki / Ghiya),Lagenaria siceraria,Vegetables,50,0.60,0.10,2.50,1.20
+C011,Brinjal / Eggplant (Baingan),Solanum melongena,Vegetables,100,1.40,0.30,4.00,3.40
+C012,Capsicum / Bell pepper (Shimla mirch),Capsicum annuum,Vegetables,100,1.30,0.20,4.80,1.70
+C013,Carrot (Gajar),Daucus carota,Vegetables,201,0.90,0.20,9.60,2.80
+C014,Green peas fresh (Matar),Pisum sativum,Vegetables,347,7.20,0.10,13.80,5.10
+C015,French beans,Phaseolus vulgaris,Vegetables,109,1.70,0.10,4.50,2.70
+C016,Ridge gourd (Turai),Luffa acutangula,Vegetables,71,0.50,0.10,3.40,1.60
+C017,Pumpkin (Kaddu),Cucurbita moschata,Vegetables,105,1.40,0.10,4.60,1.10
+C018,Cucumber (Kheera),Cucumis sativus,Vegetables,54,0.60,0.10,2.50,0.50
+C019,Radish (Mooli),Raphanus sativus,Vegetables,71,0.70,0.10,3.40,1.60
+C020,Beetroot (Chukandar),Beta vulgaris,Vegetables,180,1.60,0.10,8.80,2.80
+C021,Garlic (Lahsun),Allium sativum,Vegetables,607,6.30,0.10,29.80,2.10
+C022,Ginger (Adrak),Zingiber officinale,Vegetables,280,1.80,0.80,12.30,2.00
+C023,Green chilli (Hari mirch),Capsicum frutescens,Vegetables,188,2.60,0.60,7.30,6.80
+C024,Coriander leaves (Dhania patta),Coriandrum sativum,Vegetables,126,3.30,0.60,3.70,4.20
+C025,Mint leaves (Pudina),Mentha spicata,Vegetables,201,4.80,0.60,5.80,8.00
+C026,Curry leaves (Kadi patta),Murraya koenigii,Vegetables,452,6.10,1.00,18.70,6.40
+C027,Mushroom button,Agaricus bisporus,Vegetables,92,3.10,0.30,2.30,1.00
+C028,Sweet potato (Shakarkandi),Ipomoea batatas,Vegetables,360,1.60,0.10,20.10,3.00
+D001,Banana (Kela),Musa acuminata,Fruits,485,1.20,0.30,27.20,2.60
+D002,Apple with skin (Seb),Malus domestica,Fruits,247,0.30,0.20,13.80,2.40
+D003,Mango ripe (Aam),Mangifera indica,Fruits,310,0.80,0.40,17.00,1.60
+D004,Papaya ripe (Papita),Carica papaya,Fruits,134,0.60,0.10,7.20,1.70
+D005,Guava (Amrood),Psidium guajava,Fruits,213,0.90,0.30,11.20,5.40
+D006,Orange (Santra / Narangi),Citrus sinensis,Fruits,155,0.70,0.20,8.30,1.80
+D007,Sweet lime (Mosambi),Citrus limetta,Fruits,146,0.80,0.30,7.60,1.20
+D008,Pomegranate (Anaar),Punica granatum,Fruits,272,1.60,0.10,14.50,2.80
+D009,Watermelon (Tarbooj),Citrullus lanatus,Fruits,67,0.20,0.20,3.30,0.40
+D010,Grapes green/black (Angoor),Vitis vinifera,Fruits,255,0.70,0.20,14.00,0.90
+D011,Pineapple (Ananas),Ananas comosus,Fruits,192,0.50,0.10,10.80,1.40
+D012,Chikoo / Sapota,Manilkara zapota,Fruits,410,0.70,1.10,21.40,5.30
+D013,Custard apple (Sitaphal / Sharifa),Annona squamosa,Fruits,435,1.60,0.40,23.50,4.40
+D014,Lemon (Nimbu),Citrus limon,Fruits,96,1.00,0.90,2.80,1.30
+D015,Coconut tender water (Nariyal pani),Cocos nucifera,Fruits,79,0.70,0.20,3.70,0.00
+D016,Coconut mature meat (Nariyal giri),Cocos nucifera,Fruits,1858,4.50,41.60,13.00,13.60
+E001,Cow milk whole,Bos taurus,Milk and Dairy,280,3.20,4.10,4.40,0.00
+E002,Buffalo milk whole,Bubalus bubalis,Milk and Dairy,427,3.80,6.50,5.00,0.00
+E003,Toned milk (3% fat),Bos taurus,Milk and Dairy,243,3.10,3.00,4.70,0.00
+E004,Skimmed milk (0.5% fat),Bos taurus,Milk and Dairy,146,3.40,0.50,4.90,0.00
+E005,Curd / Dahi whole milk,Bos taurus,Milk and Dairy,251,3.10,4.00,3.00,0.00
+E006,Paneer (Cottage cheese),Bos taurus,Milk and Dairy,1109,18.30,20.80,1.20,0.00
+E007,Butter (Makkhan),Bos taurus,Milk and Dairy,3004,0.50,81.00,0.00,0.00
+E008,Ghee (Clarified butter),Bos taurus,Milk and Dairy,3766,0.00,99.50,0.00,0.00
+E009,Cheese processed,Bos taurus,Milk and Dairy,1310,24.10,25.10,1.80,0.00
+E010,Khoa / Mawa,Bos taurus,Milk and Dairy,1343,14.60,25.70,5.30,0.00
+E011,Buttermilk (Chhach / Mattha),Bos taurus,Milk and Dairy,121,1.50,1.00,3.50,0.00
+E012,Greek yogurt unsweetened,Bos taurus,Milk and Dairy,322,9.00,3.50,4.00,0.00
+F001,Egg whole hen raw,Gallus gallus,Eggs and Poultry,565,13.30,9.00,0.00,0.00
+F002,Egg white hen,Gallus gallus,Eggs and Poultry,218,10.90,0.20,0.70,0.00
+F003,Egg yolk hen,Gallus gallus,Eggs and Poultry,1347,15.90,26.50,0.60,0.00
+F004,Chicken breast boneless skinless,Gallus gallus,Eggs and Poultry,690,31.02,3.60,0.00,0.00
+F005,Chicken thigh meat,Gallus gallus,Eggs and Poultry,874,24.00,12.50,0.00,0.00
+F006,Chicken curry cut with bone,Gallus gallus,Eggs and Poultry,816,21.50,11.00,0.00,0.00
+F007,Mutton / Goat meat lean,Capra hircus,Meats,577,20.60,6.00,0.00,0.00
+F008,Mutton curry cut with fat,Capra hircus,Meats,1025,18.50,19.00,0.00,0.00
+F009,Rohu fish (Labeo rohita),Labeo rohita,Fish and Seafood,406,16.60,1.40,4.40,0.00
+F010,Catla fish (Gibelion catla),Gibelion catla,Fish and Seafood,464,19.20,2.10,2.80,0.00
+F011,Pomfret white (Silver pomfret),Pampus argenteus,Fish and Seafood,427,17.00,3.10,1.20,0.00
+F012,Salmon (Indian / Atlantic),Salmo salar,Fish and Seafood,870,20.40,13.00,0.00,0.00
+F013,Prawns / Shrimp,Penaeus monodon,Fish and Seafood,377,19.10,0.80,0.80,0.00
+F014,Hilsa fish,Tenualosa ilisha,Fish and Seafood,912,21.80,14.50,0.00,0.00
+G001,Almonds (Badam),Prunus dulcis,Nuts and Seeds,2427,21.15,49.93,21.55,12.50
+G002,Walnuts (Akhrot),Juglans regia,Nuts and Seeds,2736,15.23,65.21,13.71,6.70
+G003,Cashew nuts (Kaju),Anacardium occidentale,Nuts and Seeds,2314,18.22,43.85,30.19,3.30
+G004,Peanuts / Groundnuts (Moongphali),Arachis hypogaea,Nuts and Seeds,2372,25.80,49.20,16.10,8.50
+G005,Pistachios (Pista),Pistacia vera,Nuts and Seeds,2351,20.16,45.32,27.17,10.60
+G006,Flax seeds (Alsi),Linum usitatissimum,Nuts and Seeds,2243,18.29,42.16,28.88,27.30
+G007,Chia seeds,Salvia hispanica,Nuts and Seeds,2033,16.54,30.74,42.12,34.40
+G008,Sesame seeds white/black (Til),Sesamum indicum,Nuts and Seeds,2397,17.73,49.67,23.45,11.80
+G009,Sunflower seeds,Helianthus annuus,Nuts and Seeds,2443,20.78,51.46,20.00,8.60
+G010,Pumpkin seeds,Cucurbita pepo,Nuts and Seeds,2339,30.23,49.05,10.71,6.00
+H001,Mustard oil (Sarson tel),Brassica nigra,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H002,Sunflower oil,Helianthus annuus,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H003,Groundnut / Peanut oil,Arachis hypogaea,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H004,Coconut oil,Cocos nucifera,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H005,Olive oil,Olea europaea,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H006,Soybean oil,Glycine max,Fats and Oils,3766,0.00,100.00,0.00,0.00
+H007,Sesame / Gingelly oil (Til tel),Sesamum indicum,Fats and Oils,3766,0.00,100.00,0.00,0.00
+I001,Jaggery (Gur),Saccharum officinarum,Sugars and Sweets,1586,0.40,0.10,85.00,0.00
+I002,Sugar white (Cheeni),Saccharum officinarum,Sugars and Sweets,1619,0.00,0.00,99.80,0.00
+I003,Honey (Shehad),Apis mellifera,Sugars and Sweets,1335,0.30,0.00,79.50,0.20

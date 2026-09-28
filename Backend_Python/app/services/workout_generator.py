@@ -403,27 +403,40 @@ def generate_personalized_workout_plan(
         # Sort preferred exercises to the top
         matched_pool.sort(key=lambda ex: any(p in ex.get("name", "").lower() for p in preferred_set), reverse=True)
 
+        # Deduplicate pool
+        seen_ids = set()
+        deduped_pool = []
+        for ex in matched_pool:
+            eid = ex.get("exerciseId")
+            if eid and eid not in seen_ids:
+                seen_ids.add(eid)
+                deduped_pool.append(ex)
+
         # Fallback if filtered pool is too small
-        if len(matched_pool) < target_exercise_count:
+        if len(deduped_pool) < target_exercise_count:
             fallback_pool = _filter_exercises_by_criteria(
                 catalog=catalog,
                 body_parts=day_body_parts,
                 allowed_equipments=available_equipment,
-                exclude_ids=used_exercise_ids,
+                exclude_ids=list(seen_ids),
                 disliked_names=disliked_exercises,
                 physical_limitations=physical_limitations
             )
-            matched_pool += fallback_pool
+            for ex in fallback_pool:
+                eid = ex.get("exerciseId")
+                if eid and eid not in seen_ids:
+                    seen_ids.add(eid)
+                    deduped_pool.append(ex)
 
-        if len(matched_pool) < target_exercise_count:
-            # Broaden without equipment restriction if pool still dry
-            matched_pool += [
-                ex for ex in catalog
-                if ex.get("exerciseId") not in used_exercise_ids
-                and not any(ik in ex.get("name", "").lower() for ik in INJURY_EXCLUSION_KEYWORDS.get("shoulder", []))
-            ]
+        if len(deduped_pool) < target_exercise_count:
+            # Broaden without restriction if pool still dry
+            for ex in catalog:
+                eid = ex.get("exerciseId")
+                if eid and eid not in seen_ids and not any(ik in ex.get("name", "").lower() for ik in INJURY_EXCLUSION_KEYWORDS.get("shoulder", [])):
+                    seen_ids.add(eid)
+                    deduped_pool.append(ex)
 
-        selected_for_day = matched_pool[:target_exercise_count]
+        selected_for_day = deduped_pool[:target_exercise_count]
         for ex in selected_for_day:
             used_exercise_ids.append(ex.get("exerciseId"))
 

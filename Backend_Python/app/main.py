@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, Security, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-from app.routes import profile, workout, meal, auth, leaderboard, food_scanner
-import jwt
+from app.routes import profile, workout, meal, auth, leaderboard, food_scanner, nutrition
 import logging
 from app.database import ping_db, db
 from app.services.dataset_loader import seed_exercise_catalog, DATASET_DIR
+from app.security import verify_jwt, API_KEY, JWT_SECRET
 import uvicorn
 import os
 from dotenv import load_dotenv
@@ -15,42 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-from typing import Optional
-
-API_KEY = os.getenv("API_KEY", "FitStore_Secret_Key_2026_Secure")
-JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("API_KEY") or "FitStore_JWT_Signing_Key_2026_Change_Me"
-security = HTTPBearer(auto_error=False)
-
-async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Security(security)):
-    # 1. Check for X-API-KEY header first
-    api_key_header = request.headers.get("X-API-KEY") or request.headers.get("x-api-key")
-    if api_key_header and api_key_header == API_KEY:
-        return "api_key_authorized"
-
-    # 2. Check for Authorization Bearer token
-    if credentials and credentials.credentials:
-        token = credentials.credentials
-        if token == API_KEY:
-            return "api_key_authorized"
-
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            device_id = payload.get("sub")
-            path_device_id = request.path_params.get("device_id") or request.path_params.get("deviceId") or request.path_params.get("userId")
-            if path_device_id and device_id and path_device_id != device_id:
-                raise HTTPException(status_code=403, detail="Access denied: token does not match requested resource")
-            return device_id or "authorized_user"
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expired")
-        except jwt.PyJWTError:
-            # Check if token matches raw API key
-            if token == API_KEY:
-                return "api_key_authorized"
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    # If neither Bearer nor X-API-KEY was provided
-    raise HTTPException(status_code=401, detail="Authentication credentials were not provided (Bearer token or X-API-KEY required)")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -64,14 +27,15 @@ async def lifespan(app: FastAPI):
         await db["userprofiles"].create_index("friendCode", unique=True, sparse=True)
         await db["friends"].create_index("userId", unique=True)
         await db["leaderboard_stats"].create_index("userId", unique=True)
+        await db["scan_feedback"].create_index("userId")
         await seed_exercise_catalog(db["exercises_catalog"])
-        logger.info("Database indexes and exercises catalog verified/created.")
+        logger.info("Database indexes, feedback collections, and exercises catalog verified/created.")
     except Exception as e:
         logger.warning(f"Database initialization failed: {e}")
         logger.info("Application will continue, but database operations may fail.")
     yield
 
-app = FastAPI(title="FitStore API", description="Python-based Backend for Fitness Tracking App", lifespan=lifespan)
+app = FastAPI(title="FitStore API", description="Python-based Backend for Fitness Tracking App & Food Vision Pipeline", lifespan=lifespan)
 
 # Request Logger Middleware
 @app.middleware("http")
@@ -121,6 +85,7 @@ app.include_router(profile.router, prefix="/api/profile", tags=["Profile"], depe
 app.include_router(workout.router, prefix="/api/workouts", tags=["Workouts"], dependencies=[Depends(verify_jwt)])
 app.include_router(meal.router, prefix="/api/meals", tags=["Meals"], dependencies=[Depends(verify_jwt)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["Leaderboard"], dependencies=[Depends(verify_jwt)])
+app.include_router(nutrition.router, prefix="/api/nutrition", tags=["Nutrition Engine"], dependencies=[Depends(verify_jwt)])
 app.include_router(food_scanner.router, tags=["Food Vision Scanner"], dependencies=[Depends(verify_jwt)])
 
 if __name__ == "__main__":

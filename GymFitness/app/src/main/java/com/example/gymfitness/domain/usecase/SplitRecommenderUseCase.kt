@@ -23,12 +23,12 @@ class SplitRecommenderUseCase @Inject constructor() {
                     daysPerWeek = if (daysPerWeek in 2..3) daysPerWeek else 3,
                     description = "Hits every major muscle group each session. Maximizes consistency and recovery for beginners & busy schedules.",
                     recommendedExercises = listOf(
-                        findExercise("Barbell Back Squat"),
-                        findExercise("Barbell Bench Press"),
-                        findExercise("Pull-Ups / Lat Pulldown"),
-                        findExercise("Overhead Barbell Press"),
-                        findExercise("Romanian Deadlift (RDL)"),
-                        findExercise("Plank Hold")
+                        findExercise("Sled 45° Leg Press"),
+                        findExercise("Barbell Incline Bench Press"),
+                        findExercise("Lever Front Pulldown"),
+                        findExercise("Dumbbell Front Raise"),
+                        findExercise("Weighted Hyperextension (Stability Ball)"),
+                        findExercise("Cable Seated Crunch")
                     ).filterNotNull()
                 )
             }
@@ -39,12 +39,12 @@ class SplitRecommenderUseCase @Inject constructor() {
                     daysPerWeek = 4,
                     description = "Optimal frequency-to-recovery ratio for intermediates. Trains each muscle group 2x per week with dedicated upper & lower days.",
                     recommendedExercises = listOf(
-                        findExercise("Barbell Bench Press"),
-                        findExercise("Barbell Bent-Over Row"),
-                        findExercise("Overhead Barbell Press"),
-                        findExercise("Pull-Ups / Lat Pulldown"),
-                        findExercise("Incline Dumbbell Press"),
-                        findExercise("Barbell Bicep Curl")
+                        findExercise("Barbell Incline Bench Press"),
+                        findExercise("Lever Seated Row"),
+                        findExercise("Dumbbell Front Raise"),
+                        findExercise("Lever Front Pulldown"),
+                        findExercise("Smith Incline Bench Press"),
+                        findExercise("Barbell Standing Close-Grip Curl")
                     ).filterNotNull()
                 )
             }
@@ -55,12 +55,12 @@ class SplitRecommenderUseCase @Inject constructor() {
                     daysPerWeek = daysPerWeek.coerceIn(5, 6),
                     description = "High-volume split for advanced lifters. Groups movements by push, pull, and leg actions with a guaranteed rest day between leg sessions.",
                     recommendedExercises = listOf(
-                        findExercise("Barbell Bench Press"),
-                        findExercise("Overhead Barbell Press"),
-                        findExercise("Incline Dumbbell Press"),
-                        findExercise("Chest Dips"),
-                        findExercise("Tricep Rope Pushdown"),
-                        findExercise("Dumbbell Lateral Raises")
+                        findExercise("Barbell Incline Bench Press"),
+                        findExercise("Dumbbell Palms-In Incline Press"),
+                        findExercise("Dumbbell Front Raise"),
+                        findExercise("Impossible Dips"),
+                        findExercise("Barbell Seated Overhead Triceps Extension"),
+                        findExercise("Cable Decline Fly")
                     ).filterNotNull()
                 )
             }

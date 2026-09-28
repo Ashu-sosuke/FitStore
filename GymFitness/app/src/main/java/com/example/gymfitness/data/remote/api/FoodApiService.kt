@@ -8,6 +8,7 @@ import com.google.gson.annotations.SerializedName
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -21,6 +22,11 @@ interface FoodApiService {
         @Part file: MultipartBody.Part,
         @Header("X-User-Id") userId: String = "anonymous"
     ): ScanFoodResponse
+
+    @POST("api/scan/feedback")
+    suspend fun sendScanFeedback(
+        @Body feedback: ScanFeedbackDto
+    ): Map<String, Any>
 }
 
 data class ScanFoodResponse(
@@ -29,7 +35,32 @@ data class ScanFoodResponse(
     val calories: Double,
     val macros: MacrosResponse,
     val confidence: Double,
-    @SerializedName("logged_at") val loggedAt: String
+    @SerializedName("logged_at") val loggedAt: String,
+    @SerializedName("is_food") val isFood: Boolean? = true,
+    val cuisine: String? = "Indian",
+    @SerializedName("estimated_grams") val estimatedGrams: Double? = 100.0,
+    val items: List<FoodItemBreakdownDto>? = null,
+    @SerializedName("top_alternatives") val topAlternatives: List<String>? = null,
+    @SerializedName("scan_id") val scanId: String? = null
+)
+
+data class FoodItemBreakdownDto(
+    val name: String,
+    @SerializedName("matched_name") val matchedName: String,
+    val grams: Double,
+    val calories: Double,
+    @SerializedName("protein_g") val proteinG: Double,
+    @SerializedName("carbs_g") val carbsG: Double,
+    @SerializedName("fats_g") val fatsG: Double,
+    val source: String? = "IFCT_2017"
+)
+
+data class ScanFeedbackDto(
+    @SerializedName("scan_id") val scanId: String?,
+    @SerializedName("predicted_food") val predictedFood: String,
+    @SerializedName("corrected_food") val correctedFood: String,
+    val rating: Int? = null,
+    val comments: String? = null
 )
 
 data class MacrosResponse(
@@ -44,15 +75,13 @@ data class MacrosResponse(
  */
 fun Bitmap.toMultipartBody(): MultipartBody.Part {
     val stream = ByteArrayOutputStream()
-    // Reduced quality to 50% to shrink file size for faster uploads
-    this.compress(Bitmap.CompressFormat.JPEG, 50, stream)
+    // Compress as JPEG 75% quality
+    this.compress(Bitmap.CompressFormat.JPEG, 75, stream)
     val byteArray = stream.toByteArray()
     val requestFile = byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
 
     return MultipartBody.Part.createFormData("file", "scan.jpg", requestFile)
 }
-
-
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 fun ImageProxy.toRotatedBitmap(): Bitmap? {

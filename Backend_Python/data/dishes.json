@@ -1,0 +1,727 @@
+{
+  "biryani": {
+    "name": "Chicken Dum Biryani (1 plate)",
+    "serving_unit": "1 plate (320g)",
+    "serving_grams": 320.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 80.0},
+      {"name": "Chicken curry cut with bone", "grams": 120.0},
+      {"name": "Curd / Dahi whole milk", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Ghee (Clarified butter)", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Layered aromatic basmati rice cooked with spiced chicken"
+  },
+  "baryani": {
+    "name": "Chicken Dum Biryani (1 plate)",
+    "serving_unit": "1 plate (320g)",
+    "serving_grams": 320.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 80.0},
+      {"name": "Chicken curry cut with bone", "grams": 120.0},
+      {"name": "Curd / Dahi whole milk", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Ghee (Clarified butter)", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Layered aromatic basmati rice cooked with spiced chicken"
+  },
+  "dosa": {
+    "name": "Plain Dosa (1 piece)",
+    "serving_unit": "1 dosa",
+    "serving_grams": 80.0,
+    "ingredients": [
+      {"name": "Rice parboiled", "grams": 45.0},
+      {"name": "Black gram split (Urad dal)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Crispy thin fermented rice and lentil crepe"
+  },
+  "dhosa": {
+    "name": "Plain Dosa (1 piece)",
+    "serving_unit": "1 dosa",
+    "serving_grams": 80.0,
+    "ingredients": [
+      {"name": "Rice parboiled", "grams": 45.0},
+      {"name": "Black gram split (Urad dal)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Crispy thin fermented rice and lentil crepe"
+  },
+  "roti": {
+    "name": "Roti / Phulka (1 piece)",
+    "serving_unit": "1 roti",
+    "serving_grams": 35.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 25.0},
+      {"name": "Ghee (Clarified butter)", "grams": 1.0}
+    ],
+    "cooking_oil_grams": 1.0,
+    "cooking_notes": "Dry roasted whole wheat flatbread with light ghee touch"
+  },
+  "chapati": {
+    "name": "Chapati (1 piece)",
+    "serving_unit": "1 chapati",
+    "serving_grams": 40.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 28.0},
+      {"name": "Sunflower oil", "grams": 2.0}
+    ],
+    "cooking_oil_grams": 2.0,
+    "cooking_notes": "Griddled whole wheat flatbread with 2g oil"
+  },
+  "paratha plain": {
+    "name": "Plain Paratha (1 piece)",
+    "serving_unit": "1 paratha",
+    "serving_grams": 60.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 40.0},
+      {"name": "Ghee (Clarified butter)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Layered pan-fried flatbread with ghee"
+  },
+  "aloo paratha": {
+    "name": "Aloo Paratha (1 piece)",
+    "serving_unit": "1 paratha",
+    "serving_grams": 120.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 50.0},
+      {"name": "Potato (Aloo)", "grams": 50.0},
+      {"name": "Onion (Pyaz)", "grams": 10.0},
+      {"name": "Ghee (Clarified butter)", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Spiced mashed potato stuffed paratha roasted with ghee"
+  },
+  "paneer paratha": {
+    "name": "Paneer Paratha (1 piece)",
+    "serving_unit": "1 paratha",
+    "serving_grams": 130.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 50.0},
+      {"name": "Paneer (Cottage cheese)", "grams": 50.0},
+      {"name": "Onion (Pyaz)", "grams": 10.0},
+      {"name": "Ghee (Clarified butter)", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Crumbled spiced paneer stuffed flatbread with ghee"
+  },
+  "gobi paratha": {
+    "name": "Gobi Paratha (1 piece)",
+    "serving_unit": "1 paratha",
+    "serving_grams": 120.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 50.0},
+      {"name": "Cauliflower (Phool gobi)", "grams": 55.0},
+      {"name": "Ghee (Clarified butter)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Grated spiced cauliflower stuffed flatbread"
+  },
+  "poori": {
+    "name": "Poori / Puri (1 piece)",
+    "serving_unit": "1 poori",
+    "serving_grams": 35.0,
+    "ingredients": [
+      {"name": "Wheat flour (Atta)", "grams": 22.0},
+      {"name": "Sunflower oil", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Deep fried puffed whole wheat bread"
+  },
+  "bhatura": {
+    "name": "Bhatura (1 piece)",
+    "serving_unit": "1 bhatura",
+    "serving_grams": 80.0,
+    "ingredients": [
+      {"name": "Refined wheat flour (Maida)", "grams": 55.0},
+      {"name": "Curd / Dahi whole milk", "grams": 10.0},
+      {"name": "Sunflower oil", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Deep fried fermented leavened sourdough bread"
+  },
+  "naan plain": {
+    "name": "Plain Tandoori Naan (1 piece)",
+    "serving_unit": "1 naan",
+    "serving_grams": 90.0,
+    "ingredients": [
+      {"name": "Refined wheat flour (Maida)", "grams": 65.0},
+      {"name": "Curd / Dahi whole milk", "grams": 15.0},
+      {"name": "Butter (Makkhan)", "grams": 4.0}
+    ],
+    "cooking_oil_grams": 4.0,
+    "cooking_notes": "Tandoor baked leavened flatbread brushed with butter"
+  },
+  "butter naan": {
+    "name": "Butter Naan (1 piece)",
+    "serving_unit": "1 naan",
+    "serving_grams": 100.0,
+    "ingredients": [
+      {"name": "Refined wheat flour (Maida)", "grams": 65.0},
+      {"name": "Curd / Dahi whole milk", "grams": 15.0},
+      {"name": "Butter (Makkhan)", "grams": 10.0}
+    ],
+    "cooking_oil_grams": 10.0,
+    "cooking_notes": "Tandoori naan glazed generously with butter"
+  },
+  "garlic naan": {
+    "name": "Garlic Naan (1 piece)",
+    "serving_unit": "1 naan",
+    "serving_grams": 105.0,
+    "ingredients": [
+      {"name": "Refined wheat flour (Maida)", "grams": 65.0},
+      {"name": "Garlic (Lahsun)", "grams": 8.0},
+      {"name": "Butter (Makkhan)", "grams": 10.0}
+    ],
+    "cooking_oil_grams": 10.0,
+    "cooking_notes": "Tandoori naan topped with minced garlic and butter"
+  },
+  "steamed rice": {
+    "name": "Steamed Rice (1 katori / bowl)",
+    "serving_unit": "1 bowl (150g)",
+    "serving_grams": 150.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 50.0}
+    ],
+    "cooking_oil_grams": 0.0,
+    "cooking_notes": "Boiled white rice with 3x water absorption"
+  },
+  "jeera rice": {
+    "name": "Jeera Rice (1 bowl)",
+    "serving_unit": "1 bowl (160g)",
+    "serving_grams": 160.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 50.0},
+      {"name": "Ghee (Clarified butter)", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Basmati rice tempered with cumin seeds and ghee"
+  },
+  "veg pulao": {
+    "name": "Vegetable Pulao (1 plate)",
+    "serving_unit": "1 plate (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 60.0},
+      {"name": "Carrot (Gajar)", "grams": 20.0},
+      {"name": "Green peas fresh (Matar)", "grams": 20.0},
+      {"name": "French beans", "grams": 15.0},
+      {"name": "Onion (Pyaz)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Fragrant spiced rice pilaf with mixed seasonal vegetables"
+  },
+  "veg biryani": {
+    "name": "Vegetable Dum Biryani (1 plate)",
+    "serving_unit": "1 plate (280g)",
+    "serving_grams": 280.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 75.0},
+      {"name": "Paneer (Cottage cheese)", "grams": 35.0},
+      {"name": "Potato (Aloo)", "grams": 25.0},
+      {"name": "Carrot (Gajar)", "grams": 20.0},
+      {"name": "Green peas fresh (Matar)", "grams": 20.0},
+      {"name": "Curd / Dahi whole milk", "grams": 25.0},
+      {"name": "Ghee (Clarified butter)", "grams": 10.0}
+    ],
+    "cooking_oil_grams": 10.0,
+    "cooking_notes": "Layered aromatic basmati rice cooked on dum with spiced veggies & paneer"
+  },
+  "chicken biryani": {
+    "name": "Chicken Dum Biryani (1 plate)",
+    "serving_unit": "1 plate (320g)",
+    "serving_grams": 320.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 80.0},
+      {"name": "Chicken curry cut with bone", "grams": 120.0},
+      {"name": "Curd / Dahi whole milk", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Ghee (Clarified butter)", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Layered basmati rice with marinated chicken pieces cooked on dum"
+  },
+  "mutton biryani": {
+    "name": "Mutton Biryani (1 plate)",
+    "serving_unit": "1 plate (320g)",
+    "serving_grams": 320.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 80.0},
+      {"name": "Mutton curry cut with fat", "grams": 120.0},
+      {"name": "Curd / Dahi whole milk", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Ghee (Clarified butter)", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Slow cooked lamb/goat biryani with whole spices and ghee"
+  },
+  "egg biryani": {
+    "name": "Egg Biryani (1 plate)",
+    "serving_unit": "1 plate (280g)",
+    "serving_grams": 280.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 80.0},
+      {"name": "Egg whole hen raw", "grams": 100.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Spiced basmati rice layered with 2 pan-fried boiled eggs"
+  },
+  "dal tadka": {
+    "name": "Dal Tadka (1 katori / bowl)",
+    "serving_unit": "1 bowl (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Red gram split (Toor dal / Arhar dal)", "grams": 35.0},
+      {"name": "Tomato (Tamatar)", "grams": 20.0},
+      {"name": "Onion (Pyaz)", "grams": 15.0},
+      {"name": "Garlic (Lahsun)", "grams": 4.0},
+      {"name": "Ghee (Clarified butter)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Yellow pigeon pea stew tempered with cumin, garlic and ghee"
+  },
+  "dal fry": {
+    "name": "Dal Fry (1 bowl)",
+    "serving_unit": "1 bowl (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Red gram split (Toor dal / Arhar dal)", "grams": 30.0},
+      {"name": "Bengal gram split (Chana dal)", "grams": 10.0},
+      {"name": "Tomato (Tamatar)", "grams": 25.0},
+      {"name": "Onion (Pyaz)", "grams": 20.0},
+      {"name": "Sunflower oil", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Thick spiced lentil curry sautéed with onions and tomatoes"
+  },
+  "dal makhani": {
+    "name": "Dal Makhani (1 bowl)",
+    "serving_unit": "1 bowl (200g)",
+    "serving_grams": 200.0,
+    "ingredients": [
+      {"name": "Black gram whole (Sabut urad)", "grams": 40.0},
+      {"name": "Kidney beans (Rajma)", "grams": 10.0},
+      {"name": "Tomato (Tamatar)", "grams": 30.0},
+      {"name": "Butter (Makkhan)", "grams": 12.0},
+      {"name": "Cow milk whole", "grams": 25.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Slow simmered whole black lentils with kidney beans, butter and cream"
+  },
+  "moong dal khichdi": {
+    "name": "Moong Dal Khichdi (1 plate)",
+    "serving_unit": "1 plate (250g)",
+    "serving_grams": 250.0,
+    "ingredients": [
+      {"name": "Rice raw milled", "grams": 45.0},
+      {"name": "Green gram split (Moong dal)", "grams": 30.0},
+      {"name": "Ghee (Clarified butter)", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Comforting one-pot rice and yellow lentil porridge with ghee"
+  },
+  "rajma masala": {
+    "name": "Rajma Masala (1 bowl)",
+    "serving_unit": "1 bowl (200g)",
+    "serving_grams": 200.0,
+    "ingredients": [
+      {"name": "Kidney beans (Rajma)", "grams": 45.0},
+      {"name": "Tomato (Tamatar)", "grams": 35.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Sunflower oil", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Red kidney bean curry in spiced onion-tomato gravy"
+  },
+  "chole masala": {
+    "name": "Chole / Chana Masala (1 bowl)",
+    "serving_unit": "1 bowl (200g)",
+    "serving_grams": 200.0,
+    "ingredients": [
+      {"name": "Chickpeas Kabuli (Safed chana)", "grams": 50.0},
+      {"name": "Tomato (Tamatar)", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Punjabi style spicy chickpea curry with whole aromatic spices"
+  },
+  "paneer butter masala": {
+    "name": "Paneer Butter Masala (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Paneer (Cottage cheese)", "grams": 75.0},
+      {"name": "Tomato (Tamatar)", "grams": 50.0},
+      {"name": "Butter (Makkhan)", "grams": 10.0},
+      {"name": "Cashew nuts (Kaju)", "grams": 10.0},
+      {"name": "Cow milk whole", "grams": 25.0}
+    ],
+    "cooking_oil_grams": 10.0,
+    "cooking_notes": "Soft paneer cubes in rich, creamy tomato and cashew nut gravy"
+  },
+  "palak paneer": {
+    "name": "Palak Paneer (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Spinach (Palak)", "grams": 120.0},
+      {"name": "Paneer (Cottage cheese)", "grams": 65.0},
+      {"name": "Onion (Pyaz)", "grams": 20.0},
+      {"name": "Tomato (Tamatar)", "grams": 20.0},
+      {"name": "Ghee (Clarified butter)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Indian cottage cheese in seasoned spinach puree gravy"
+  },
+  "kadai paneer": {
+    "name": "Kadai Paneer (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Paneer (Cottage cheese)", "grams": 75.0},
+      {"name": "Capsicum / Bell pepper (Shimla mirch)", "grams": 35.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Tomato (Tamatar)", "grams": 35.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Cottage cheese and crunchy bell peppers tossed in fresh ground spices"
+  },
+  "matar paneer": {
+    "name": "Matar Paneer (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Paneer (Cottage cheese)", "grams": 60.0},
+      {"name": "Green peas fresh (Matar)", "grams": 40.0},
+      {"name": "Tomato (Tamatar)", "grams": 35.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Sunflower oil", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Classic North Indian curry with green peas and paneer"
+  },
+  "paneer bhurji": {
+    "name": "Paneer Bhurji (1 plate)",
+    "serving_unit": "1 plate (160g)",
+    "serving_grams": 160.0,
+    "ingredients": [
+      {"name": "Paneer (Cottage cheese)", "grams": 90.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Tomato (Tamatar)", "grams": 20.0},
+      {"name": "Green chilli (Hari mirch)", "grams": 3.0},
+      {"name": "Sunflower oil", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Scrambled spiced cottage cheese with sautéed vegetables"
+  },
+  "aloo gobi": {
+    "name": "Aloo Gobi dry sabzi (1 bowl)",
+    "serving_unit": "1 bowl (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Potato (Aloo)", "grams": 60.0},
+      {"name": "Cauliflower (Phool gobi)", "grams": 90.0},
+      {"name": "Tomato (Tamatar)", "grams": 20.0},
+      {"name": "Sunflower oil", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Stir-fried spiced potatoes and cauliflower florets"
+  },
+  "bhindi masala": {
+    "name": "Bhindi Masala dry sabzi (1 bowl)",
+    "serving_unit": "1 bowl (160g)",
+    "serving_grams": 160.0,
+    "ingredients": [
+      {"name": "Okra / Ladyfinger (Bhindi)", "grams": 120.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Mustard oil (Sarson tel)", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Pan-sautéed okra with sliced onions and dry spices"
+  },
+  "baingan bharta": {
+    "name": "Baingan Bharta (1 bowl)",
+    "serving_unit": "1 bowl (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Brinjal / Eggplant (Baingan)", "grams": 130.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Tomato (Tamatar)", "grams": 25.0},
+      {"name": "Mustard oil (Sarson tel)", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Smoky fire-roasted eggplant mashed and tempered with mustard oil"
+  },
+  "mix veg": {
+    "name": "Mixed Vegetable Curry (1 bowl)",
+    "serving_unit": "1 bowl (200g)",
+    "serving_grams": 200.0,
+    "ingredients": [
+      {"name": "Carrot (Gajar)", "grams": 30.0},
+      {"name": "French beans", "grams": 30.0},
+      {"name": "Green peas fresh (Matar)", "grams": 25.0},
+      {"name": "Cauliflower (Phool gobi)", "grams": 30.0},
+      {"name": "Tomato (Tamatar)", "grams": 30.0},
+      {"name": "Sunflower oil", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 7.0,
+    "cooking_notes": "Medley of garden fresh vegetables in spiced onion-tomato curry"
+  },
+  "butter chicken": {
+    "name": "Butter Chicken / Murgh Makhani (1 bowl)",
+    "serving_unit": "1 bowl (240g)",
+    "serving_grams": 240.0,
+    "ingredients": [
+      {"name": "Chicken breast boneless skinless", "grams": 120.0},
+      {"name": "Tomato (Tamatar)", "grams": 50.0},
+      {"name": "Butter (Makkhan)", "grams": 12.0},
+      {"name": "Cashew nuts (Kaju)", "grams": 10.0},
+      {"name": "Curd / Dahi whole milk", "grams": 20.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Tandoori chicken pieces simmered in silky smooth butter and tomato sauce"
+  },
+  "chicken curry": {
+    "name": "Home Style Chicken Curry (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Chicken curry cut with bone", "grams": 130.0},
+      {"name": "Onion (Pyaz)", "grams": 35.0},
+      {"name": "Tomato (Tamatar)", "grams": 25.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Traditional Indian home style chicken curry with gravy"
+  },
+  "kadai chicken": {
+    "name": "Kadai Chicken (1 bowl)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Chicken breast boneless skinless", "grams": 120.0},
+      {"name": "Capsicum / Bell pepper (Shimla mirch)", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Tomato (Tamatar)", "grams": 30.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Spicy chicken stir fry with chunky bell peppers and onions"
+  },
+  "chicken tikka": {
+    "name": "Chicken Tikka (6 pieces)",
+    "serving_unit": "6 pieces (150g)",
+    "serving_grams": 150.0,
+    "ingredients": [
+      {"name": "Chicken breast boneless skinless", "grams": 130.0},
+      {"name": "Curd / Dahi whole milk", "grams": 20.0},
+      {"name": "Mustard oil (Sarson tel)", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Yogurt and spice marinated boneless chicken skewers grilled in tandoor"
+  },
+  "tandoori chicken": {
+    "name": "Tandoori Chicken (1 leg / breast quarter)",
+    "serving_unit": "1 quarter piece (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Chicken thigh meat", "grams": 160.0},
+      {"name": "Curd / Dahi whole milk", "grams": 25.0},
+      {"name": "Mustard oil (Sarson tel)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Bone-in chicken marinated in yogurt and tandoori spices, char-grilled"
+  },
+  "egg curry": {
+    "name": "Egg Curry (2 eggs in gravy)",
+    "serving_unit": "1 bowl (200g)",
+    "serving_grams": 200.0,
+    "ingredients": [
+      {"name": "Egg whole hen raw", "grams": 100.0},
+      {"name": "Tomato (Tamatar)", "grams": 35.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Hard boiled eggs shallow fried and served in onion-tomato gravy"
+  },
+  "egg bhurji": {
+    "name": "Egg Bhurji / Indian Scrambled Eggs (2 eggs)",
+    "serving_unit": "1 plate (120g)",
+    "serving_grams": 120.0,
+    "ingredients": [
+      {"name": "Egg whole hen raw", "grams": 100.0},
+      {"name": "Onion (Pyaz)", "grams": 20.0},
+      {"name": "Tomato (Tamatar)", "grams": 15.0},
+      {"name": "Green chilli (Hari mirch)", "grams": 3.0},
+      {"name": "Sunflower oil", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Spiced Indian scrambled eggs with onions, tomatoes and chillies"
+  },
+  "masala omelette": {
+    "name": "Masala Omelette (2 eggs)",
+    "serving_unit": "1 omelette (115g)",
+    "serving_grams": 115.0,
+    "ingredients": [
+      {"name": "Egg whole hen raw", "grams": 100.0},
+      {"name": "Onion (Pyaz)", "grams": 15.0},
+      {"name": "Green chilli (Hari mirch)", "grams": 3.0},
+      {"name": "Sunflower oil", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Whisked eggs with finely chopped onions, chillies and cilantro pan fried"
+  },
+  "fish curry": {
+    "name": "Fish Curry (Rohu / Indian style)",
+    "serving_unit": "1 bowl (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Rohu fish (Labeo rohita)", "grams": 120.0},
+      {"name": "Tomato (Tamatar)", "grams": 30.0},
+      {"name": "Onion (Pyaz)", "grams": 25.0},
+      {"name": "Mustard oil (Sarson tel)", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Fish steak cooked in traditional Bengali/North Indian mustard gravy"
+  },
+  "idli": {
+    "name": "Idli (1 piece)",
+    "serving_unit": "1 idli",
+    "serving_grams": 40.0,
+    "ingredients": [
+      {"name": "Rice parboiled", "grams": 20.0},
+      {"name": "Black gram split (Urad dal)", "grams": 7.0}
+    ],
+    "cooking_oil_grams": 0.0,
+    "cooking_notes": "Steamed savory fermented rice and black lentil cakes"
+  },
+  "plain dosa": {
+    "name": "Plain Dosa (1 piece)",
+    "serving_unit": "1 dosa",
+    "serving_grams": 80.0,
+    "ingredients": [
+      {"name": "Rice parboiled", "grams": 45.0},
+      {"name": "Black gram split (Urad dal)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 5.0}
+    ],
+    "cooking_oil_grams": 5.0,
+    "cooking_notes": "Crispy thin fermented rice and lentil crepe"
+  },
+  "masala dosa": {
+    "name": "Masala Dosa (1 piece with potato filling)",
+    "serving_unit": "1 dosa (160g)",
+    "serving_grams": 160.0,
+    "ingredients": [
+      {"name": "Rice parboiled", "grams": 45.0},
+      {"name": "Black gram split (Urad dal)", "grams": 15.0},
+      {"name": "Potato (Aloo)", "grams": 55.0},
+      {"name": "Onion (Pyaz)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Crispy crepe wrapped around spiced mashed potato filling"
+  },
+  "medu vada": {
+    "name": "Medu Vada (1 piece)",
+    "serving_unit": "1 vada",
+    "serving_grams": 45.0,
+    "ingredients": [
+      {"name": "Black gram split (Urad dal)", "grams": 30.0},
+      {"name": "Sunflower oil", "grams": 8.0}
+    ],
+    "cooking_oil_grams": 8.0,
+    "cooking_notes": "Deep fried savory doughnut shaped black lentil fritter"
+  },
+  "sambar": {
+    "name": "Sambar (1 bowl)",
+    "serving_unit": "1 bowl (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Red gram split (Toor dal / Arhar dal)", "grams": 25.0},
+      {"name": "Bottle gourd (Lauki / Ghiya)", "grams": 25.0},
+      {"name": "Tomato (Tamatar)", "grams": 20.0},
+      {"name": "Onion (Pyaz)", "grams": 15.0},
+      {"name": "Sunflower oil", "grams": 4.0}
+    ],
+    "cooking_oil_grams": 4.0,
+    "cooking_notes": "South Indian tangy lentil and vegetable stew with tamarind"
+  },
+  "coconut chutney": {
+    "name": "Coconut Chutney (2 tbsp / 30g)",
+    "serving_unit": "2 tbsp (30g)",
+    "serving_grams": 30.0,
+    "ingredients": [
+      {"name": "Coconut mature meat (Nariyal giri)", "grams": 15.0},
+      {"name": "Bengal gram split (Chana dal)", "grams": 4.0},
+      {"name": "Sunflower oil", "grams": 2.0}
+    ],
+    "cooking_oil_grams": 2.0,
+    "cooking_notes": "Fresh grated coconut ground with roasted gram and tempered"
+  },
+  "kanda poha": {
+    "name": "Kanda Poha (1 plate)",
+    "serving_unit": "1 plate (160g)",
+    "serving_grams": 160.0,
+    "ingredients": [
+      {"name": "Rice flakes (Poha / Aval)", "grams": 55.0},
+      {"name": "Onion (Pyaz)", "grams": 30.0},
+      {"name": "Peanuts / Groundnuts (Moongphali)", "grams": 12.0},
+      {"name": "Sunflower oil", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Flattened rice tempered with turmeric, mustard seeds, onions and peanuts"
+  },
+  "upma": {
+    "name": "Rava Upma (1 plate)",
+    "serving_unit": "1 plate (180g)",
+    "serving_grams": 180.0,
+    "ingredients": [
+      {"name": "Semolina (Suji / Rava)", "grams": 50.0},
+      {"name": "Onion (Pyaz)", "grams": 20.0},
+      {"name": "Carrot (Gajar)", "grams": 15.0},
+      {"name": "Peanuts / Groundnuts (Moongphali)", "grams": 8.0},
+      {"name": "Ghee (Clarified butter)", "grams": 6.0}
+    ],
+    "cooking_oil_grams": 6.0,
+    "cooking_notes": "Savory roasted semolina porridge with vegetables and ghee"
+  },
+  "samosa": {
+    "name": "Samosa (1 piece)",
+    "serving_unit": "1 samosa",
+    "serving_grams": 80.0,
+    "ingredients": [
+      {"name": "Refined wheat flour (Maida)", "grams": 30.0},
+      {"name": "Potato (Aloo)", "grams": 40.0},
+      {"name": "Green peas fresh (Matar)", "grams": 10.0},
+      {"name": "Sunflower oil", "grams": 12.0}
+    ],
+    "cooking_oil_grams": 12.0,
+    "cooking_notes": "Crispy deep-fried pastry cone filled with spiced potato and peas"
+  },
+  "pav bhaji": {
+    "name": "Pav Bhaji (Bhaji only 1 plate)",
+    "serving_unit": "1 plate bhaji (220g)",
+    "serving_grams": 220.0,
+    "ingredients": [
+      {"name": "Potato (Aloo)", "grams": 60.0},
+      {"name": "Cauliflower (Phool gobi)", "grams": 40.0},
+      {"name": "Green peas fresh (Matar)", "grams": 30.0},
+      {"name": "Tomato (Tamatar)", "grams": 40.0},
+      {"name": "Capsicum / Bell pepper (Shimla mirch)", "grams": 20.0},
+      {"name": "Butter (Makkhan)", "grams": 14.0}
+    ],
+    "cooking_oil_grams": 14.0,
+    "cooking_notes": "Spicy mashed vegetable gravy loaded with butter"
+  }
+}

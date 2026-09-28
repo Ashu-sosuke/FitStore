@@ -119,12 +119,14 @@ graph TD
 * **Personal Stats Dashboard**: Steps, Workouts completed, Squad Points, and Streak counter tiles.
 * **60-Second Server Cache**: Leaderboard responses are cached per-user per-period for optimal responsiveness.
 
-### 5. 📸 AI Real-Time Food Scanner (MobileNetV2)
+### 5. 📸 Food Vision AI & IFCT 2017 Certified Nutrition Engine
 * **Camera Pipeline**: Streams camera frames via CameraX on a dedicated background thread (<0.1ms drop rate).
-* **AI Inference**: Fine-tuned PyTorch `MobileNetV2` model (trained on 10 food categories) performs forward-pass classification with softmax confidence scoring.
-* **Nutrient Lookup**: Matches predictions against MongoDB `nutrients` collection for exact macros (`protein_g`, `carbs_g`, `fats_g`, `calories` per 100g).
-* **Fallback Database**: Built-in hardcoded nutrient map for 10 common foods (Egg, Chicken, Rice, Salmon, Banana, Apple, Oats, Avocado, Broccoli, Milk) ensures responses even without database connectivity.
-* **Daily Logging**: Every scan is automatically logged to `daily_logs` collection with timestamp, confidence, and user ID.
+* **Vision Pipeline & Preprocessing**: Automatically optimizes and resizes captured images to $\le 1024\text{px}$, computes SHA-256 image hashes for sub-millisecond LRU caching, and routes to structured Vision-Language Models (Gemini / OpenAI Vision) or local PyTorch `MobileNetV2` classifier.
+* **Zero-Hallucination Macro Derivation**: Vision models ONLY predict food identities and portion weights; 100% of macronutrients (Calories, Protein, Carbs, Fats) are strictly computed from the **ICMR-NIN IFCT 2017 (Indian Food Composition Tables)** database and composite Indian dish formulas.
+* **Multi-Item Plate Recognition**: Dissects complex plates and Indian thalis (e.g. *Roti, Dal Tadka, Rice, Subzi*), estimating individual components while calculating per-item and aggregate meal totals.
+* **Interactive Portion & Quantity Scaler**: Interactive bottom sheet allowing users to fine-tune exact weights in grams (numerical input, `-25g` / `+25g` step buttons, or quick preset chips `50g`, `100g`, `150g`, `200g`, `250g`).
+* **Continuous Feedback Loop**: Dedicated `/api/scan/feedback` endpoint logging user corrections to MongoDB `scan_feedback` collection for iterative ML accuracy improvements.
+* **Daily Logging**: Every verified scan is logged to `daily_logs` with authenticated user tokens.
 
 ### 6. 📊 Home Screen Daily Activity & Progress Hub
 * **Live Step Progress Bar**: Shows `Today's Steps / 10,000` with animated completion percentage badge.
@@ -140,9 +142,10 @@ graph TD
 
 ### 8. 🍽️ Meals & Nutrition Tracking
 * **Daily Macro Summary**: Aggregated daily totals for Calories, Protein, Carbs, and Fats via MongoDB aggregation pipeline.
-* **Manual Food Logger**: Search the nutrients database and log meals with exact macronutrient breakdowns.
-* **Custom Food Items**: Users can add custom food items to the shared nutrients database.
-* **Meal History**: Paginated, chronologically sorted meal history per device.
+* **Camera AI Food Scanner**: Auto-identifies food in real time with CameraX + MobileNetV2 and prompts for customizable portion weight.
+* **Manual Food Logger with Portion Controls**: Search the nutrients database, select portion weights (`50g`, `100g`, `150g`, etc.), and log meals with exact scaled macronutrient breakdowns.
+* **Custom Food Items**: Users can add custom food items with custom macro profiles to the shared nutrients database.
+* **Meal History**: Paginated, chronologically sorted meal history per device with local Room cache and cloud sync.
 
 ### 9. 👤 User Profile & Settings
 * **Editable Biometrics**: Update weight, height, age, gender, activity level, and fitness goals.
