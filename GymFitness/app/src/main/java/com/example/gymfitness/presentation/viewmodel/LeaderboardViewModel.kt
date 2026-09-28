@@ -7,7 +7,6 @@ import com.example.gymfitness.domain.models.LeaderboardEntry
 import com.example.gymfitness.domain.models.LeaderboardPeriod
 import com.example.gymfitness.domain.models.LeaderboardUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,7 +48,7 @@ class LeaderboardViewModel @Inject constructor(
 
     private var observeJob: kotlinx.coroutines.Job? = null
 
-    init { 
+    init {
         observeLeaderboard()
         refreshLeaderboard()
     }
@@ -67,7 +66,7 @@ class LeaderboardViewModel @Inject constructor(
                             entries
                         } else {
                             val fallbackUser = LeaderboardEntry(
-                                userId = profile?.deviceId ?: "",
+                                userId = profile?.deviceId ?: deviceId,
                                 displayName = profile?.name ?: "You",
                                 avatarInitials = (profile?.name ?: "Y").take(1).uppercase(),
                                 avatarColor = Color(0xFFD0FD3E),
@@ -81,21 +80,24 @@ class LeaderboardViewModel @Inject constructor(
                         }
                     }.catch { e ->
                         _uiState.value = LeaderboardUiState.Error(e.message ?: "Unknown error")
+                    }.collect { finalEntries ->
                         _uiState.value = LeaderboardUiState.Success(
                             entries = finalEntries,
                             period = period,
-                            currentUserEntry = finalEntries.find { it.isCurrentUser } ?: finalEntries.firstOrNull() ?: LeaderboardEntry(
-                                userId = deviceId,
-                                displayName = profile?.name ?: "You",
-                                avatarInitials = (profile?.name ?: "Y").take(1).uppercase(),
-                                avatarColor = Color(0xFFD0FD3E),
-                                weeklyPoints = 0,
-                                workoutsThisWeek = 0,
-                                currentStreak = profile?.currentStreak ?: 0,
-                                isCurrentUser = true,
-                                steps = 0
-                            )
+                            currentUserEntry = finalEntries.find { it.isCurrentUser }
+                                ?: finalEntries.firstOrNull() ?: LeaderboardEntry(
+                                    userId = deviceId,
+                                    displayName = "You",
+                                    avatarInitials = "Y",
+                                    avatarColor = Color(0xFFD0FD3E),
+                                    weeklyPoints = 0,
+                                    workoutsThisWeek = 0,
+                                    currentStreak = 0,
+                                    isCurrentUser = true,
+                                    steps = 0
+                                )
                         )
+                    }
                 }
             }
         }
