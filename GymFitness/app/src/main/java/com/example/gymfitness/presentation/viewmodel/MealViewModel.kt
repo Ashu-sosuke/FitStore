@@ -59,17 +59,22 @@ class MealViewModel @Inject constructor(
         }
     }
 
-    fun logFoodAsMeal(nutrient: com.example.gymfitness.data.remote.dto.NutrientDto, mealType: String) {
+    fun logFoodAsMeal(
+        nutrient: com.example.gymfitness.data.remote.dto.NutrientDto,
+        mealType: String,
+        quantityGrams: Float = 100f
+    ) {
+        val multiplier = (quantityGrams / 100f).coerceAtLeast(0.01f)
         val deviceId = tokenManager.getUserId()
         val meal = com.example.gymfitness.domain.models.Meal(
             id = null,
             deviceId = deviceId,
             type = mealType,
-            foodName = nutrient.foodName,
-            calories = nutrient.calories,
-            protein = nutrient.proteinG,
-            carbs = nutrient.carbsG,
-            fats = nutrient.fatsG
+            foodName = if (quantityGrams != 100f) "${nutrient.foodName} (${quantityGrams.toInt()}g)" else nutrient.foodName,
+            calories = nutrient.calories * multiplier,
+            protein = nutrient.proteinG * multiplier,
+            carbs = nutrient.carbsG * multiplier,
+            fats = nutrient.fatsG * multiplier
         )
         viewModelScope.launch {
             mealRepository.addMeal(meal)

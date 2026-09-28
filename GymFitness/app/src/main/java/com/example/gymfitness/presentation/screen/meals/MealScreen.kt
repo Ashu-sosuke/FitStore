@@ -276,16 +276,23 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
         // Scan Result Overlay
         AnimatedVisibility(
             visible = scannedResult != null,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(20.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+                .navigationBarsPadding(),
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut()
         ) {
             scannedResult?.let { food ->
-                ResultPopup(food = food, onAdd = {
-                    viewModel.saveMealToRoom(food)
-                    viewModel.clearResult()
-                    isScannerActive = false
-                }, onCancel = { viewModel.clearResult() })
+                ResultPopup(
+                    food = food,
+                    onAdd = { calculatedMeal ->
+                        viewModel.saveMealToRoom(calculatedMeal)
+                        viewModel.clearResult()
+                        isScannerActive = false
+                    },
+                    onCancel = { viewModel.clearResult() }
+                )
             }
         }
 
@@ -302,30 +309,315 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
 }
 
 @Composable
-fun ResultPopup(food: MealEntity, onAdd: () -> Unit, onCancel: () -> Unit) {
-    BaseCard(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(OrangeTint),
-                contentAlignment = Alignment.Center
-            ) { Text("🥗", fontSize = 24.sp) }
-            
-            Spacer(Modifier.width(16.dp))
-            
-            Column(Modifier.weight(1f)) {
-                Text(food.name, style = Typography.titleLarge, color = InkBlack)
-                Text("${food.calories.toInt()} kcal", color = SunsetOrange, style = Typography.bodyMedium)
-            }
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = onCancel, modifier = Modifier.background(SurfaceAlt, CircleShape)) {
-                    Icon(Icons.Default.Close, null, tint = InkBlack)
+fun ResultPopup(
+    food: MealEntity,
+    onAdd: (MealEntity) -> Unit,
+    onCancel: () -> Unit
+) {
+    var quantityGrams by remember { mutableStateOf(100f) }
+    var quantityText by remember { mutableStateOf("100") }
+    var selectedMealType by remember { mutableStateOf(food.mealType.lowercase()) }
+
+    val multiplier = (quantityGrams / 100f).coerceAtLeast(0.01f)
+    val calculatedCalories = (food.calories * multiplier).toInt()
+    val calculatedProtein = food.proteinG * multiplier
+    val calculatedCarbs = food.carbsG * multiplier
+    val calculatedFat = food.fatG * multiplier
+
+    val foodIcon = when (food.name.lowercase()) {
+        "egg" -> "🍳"
+        "chicken" -> "🍗"
+        "milk" -> "🥛"
+        "broccoli" -> "🥦"
+        "avocado" -> "🥑"
+        "salmon" -> "🐟"
+        "rice" -> "🍚"
+        "apple" -> "🍎"
+        "banana" -> "🍌"
+        "oats" -> "🥣"
+        else -> "🥗"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth()
+        ) {
+            // Header: Food Icon, Name, Base Info, and Close Button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(OrangeTint),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(foodIcon, fontSize = 28.sp)
                 }
-                IconButton(onClick = onAdd, modifier = Modifier.background(SunsetOrange, CircleShape)) {
-                    Icon(Icons.Default.Check, null, tint = Color.White)
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = food.name,
+                        style = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = InkBlack
+                    )
+                    Text(
+                        text = "Base: ${food.calories.toInt()} kcal / 100g",
+                        style = Typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
+
+                IconButton(
+                    onClick = onCancel,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(SurfaceAlt, CircleShape)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = InkBlack, modifier = Modifier.size(18.dp))
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = StrokeSoft)
+            Spacer(Modifier.height(14.dp))
+
+            // Quantity / Portion Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "PORTION / QUANTITY",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = TextMuted
+                )
+                Text(
+                    text = "${quantityGrams.toInt()} grams",
+                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = SunsetOrange
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Quantity Stepper and Input
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Minus 25g button
+                IconButton(
+                    onClick = {
+                        val newQty = (quantityGrams - 25f).coerceAtLeast(10f)
+                        quantityGrams = newQty
+                        quantityText = newQty.toInt().toString()
+                    },
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceAlt)
+                        .border(1.dp, StrokeSoft, RoundedCornerShape(12.dp))
+                ) {
+                    Text("-25g", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = InkBlack)
+                }
+
+                // Quantity Editable TextField
+                OutlinedTextField(
+                    value = quantityText,
+                    onValueChange = { input ->
+                        val filtered = input.filter { it.isDigit() }.take(4)
+                        quantityText = filtered
+                        val parsed = filtered.toFloatOrNull()
+                        if (parsed != null && parsed > 0) {
+                            quantityGrams = parsed
+                        }
+                    },
+                    modifier = Modifier
+                        .width(130.dp)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = CardSurface,
+                        unfocusedContainerColor = CardSurface,
+                        focusedBorderColor = SunsetOrange,
+                        unfocusedBorderColor = StrokeSoft,
+                        focusedTextColor = InkBlack,
+                        unfocusedTextColor = InkBlack
+                    ),
+                    textStyle = Typography.titleMedium.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold),
+                    singleLine = true,
+                    suffix = { Text("g", color = SunsetOrange, fontWeight = FontWeight.Bold) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                // Plus 25g button
+                IconButton(
+                    onClick = {
+                        val newQty = (quantityGrams + 25f).coerceAtMost(2000f)
+                        quantityGrams = newQty
+                        quantityText = newQty.toInt().toString()
+                    },
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceAlt)
+                        .border(1.dp, StrokeSoft, RoundedCornerShape(12.dp))
+                ) {
+                    Text("+25g", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = InkBlack)
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Quick Preset Chips (50g, 100g, 150g, 200g, 250g)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(50f, 100f, 150f, 200f, 250f).forEach { preset ->
+                    val isSelected = (quantityGrams == preset)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) SunsetOrange else SurfaceAlt)
+                            .border(1.dp, if (isSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
+                            .clickable {
+                                quantityGrams = preset
+                                quantityText = preset.toInt().toString()
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${preset.toInt()}g",
+                            style = Typography.labelSmall.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                            color = if (isSelected) Color.White else InkBlack
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Live Calculated Macro Badges
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceAlt)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MacroBadge(label = "Calories", value = "$calculatedCalories", unit = "kcal", highlight = true, modifier = Modifier.weight(1.2f))
+                MacroBadge(label = "Protein", value = String.format("%.1f", calculatedProtein), unit = "g", modifier = Modifier.weight(1f))
+                MacroBadge(label = "Carbs", value = String.format("%.1f", calculatedCarbs), unit = "g", modifier = Modifier.weight(1f))
+                MacroBadge(label = "Fat", value = String.format("%.1f", calculatedFat), unit = "g", modifier = Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Meal Type Selection Chips
+            Text(
+                text = "LOG AS",
+                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = TextMuted
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("breakfast", "lunch", "dinner", "snack").forEach { type ->
+                    val isTypeSelected = (selectedMealType == type)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isTypeSelected) OrangeTint else CardSurface)
+                            .border(1.dp, if (isTypeSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
+                            .clickable { selectedMealType = type }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = type.replaceFirstChar { it.uppercase() },
+                            color = if (isTypeSelected) SunsetOrange else InkBlack,
+                            style = Typography.labelSmall.copy(fontWeight = if (isTypeSelected) FontWeight.Bold else FontWeight.Medium)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // Add / Save Button
+            PrimaryButton(
+                text = "Log Meal • $calculatedCalories kcal",
+                onClick = {
+                    val finalMeal = food.copy(
+                        name = food.name,
+                        calories = calculatedCalories.toFloat(),
+                        proteinG = calculatedProtein,
+                        carbsG = calculatedCarbs,
+                        fatG = calculatedFat,
+                        mealType = selectedMealType
+                    )
+                    onAdd(finalMeal)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
+    }
+}
+
+@Composable
+fun MacroBadge(
+    label: String,
+    value: String,
+    unit: String,
+    highlight: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = value,
+                style = Typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                color = if (highlight) SunsetOrange else InkBlack
+            )
+            Spacer(Modifier.width(1.dp))
+            Text(
+                text = unit,
+                style = Typography.labelSmall.copy(fontSize = 10.sp),
+                color = if (highlight) SunsetOrange else TextMuted
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = Typography.labelSmall.copy(fontSize = 10.sp),
+            color = TextMuted
+        )
     }
 }
 
@@ -527,21 +819,47 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
 @Composable
 fun SearchResultItem(result: com.example.gymfitness.data.remote.dto.NutrientDto, viewModel: MealViewModel, onDismiss: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var quantityGrams by remember { mutableStateOf(100f) }
+    val multiplier = (quantityGrams / 100f).coerceAtLeast(0.01f)
+    val scaledCalories = (result.calories * multiplier).toInt()
+    val scaledProtein = result.proteinG * multiplier
+    val scaledCarbs = result.carbsG * multiplier
+    val scaledFats = result.fatsG * multiplier
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = if(expanded) OrangeTint else SurfaceAlt),
         border = BorderStroke(1.dp, if(expanded) SunsetOrange else StrokeSoft),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(result.foodName, color = InkBlack, style = Typography.titleMedium)
-                    Text("P: ${result.proteinG.toInt()}g | C: ${result.carbsG.toInt()}g | F: ${result.fatsG.toInt()}g", color = TextMuted, style = Typography.bodySmall)
+                    Text("P: ${String.format("%.1f", scaledProtein)}g | C: ${String.format("%.1f", scaledCarbs)}g | F: ${String.format("%.1f", scaledFats)}g", color = TextMuted, style = Typography.bodySmall)
                 }
-                Text("${result.calories.toInt()} kcal", color = SunsetOrange, style = Typography.titleMedium)
+                Text("$scaledCalories kcal", color = SunsetOrange, style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
             if (expanded) {
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Portion (${quantityGrams.toInt()}g):", color = TextMuted, style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(50f, 100f, 150f, 200f).forEach { q ->
+                            val isSel = (quantityGrams == q)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSel) SunsetOrange else CardSurface)
+                                    .border(1.dp, if (isSel) SunsetOrange else StrokeSoft, RoundedCornerShape(6.dp))
+                                    .clickable { quantityGrams = q }
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("${q.toInt()}g", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (isSel) Color.White else InkBlack)
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 Text("Log as:", color = TextMuted, style = Typography.labelSmall)
                 Spacer(Modifier.height(6.dp))
@@ -549,12 +867,12 @@ fun SearchResultItem(result: com.example.gymfitness.data.remote.dto.NutrientDto,
                     listOf("breakfast", "lunch", "dinner", "snack").forEach { type ->
                         Box(
                             modifier = Modifier.weight(1f).border(1.dp, SunsetOrange, RoundedCornerShape(8.dp)).clickable {
-                                viewModel.logFoodAsMeal(result, type)
+                                viewModel.logFoodAsMeal(result, type, quantityGrams)
                                 onDismiss()
                             }.padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(type.replaceFirstChar { it.uppercase() }, color = SunsetOrange, style = Typography.labelSmall)
+                            Text(type.replaceFirstChar { it.uppercase() }, color = SunsetOrange, style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                 }
