@@ -64,8 +64,17 @@ fun FriendCodeScreen(
     LaunchedEffect(addResult) {
         when (addResult) {
             is FriendCodeViewModel.AddFriendResult.Success -> {
-                val vibrator = context.getSystemService(Vibrator::class.java)
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0,50,30,80), -1))
+                try {
+                    val vibrator = context.getSystemService(Vibrator::class.java)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 50, 30, 80), -1))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(longArrayOf(0, 50, 30, 80), -1)
+                    }
+                } catch (e: Exception) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
             }
             is FriendCodeViewModel.AddFriendResult.Error -> {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)

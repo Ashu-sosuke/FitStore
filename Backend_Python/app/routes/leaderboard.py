@@ -159,12 +159,16 @@ async def update_points(points_req: WorkoutPoints):
 
 @router.post("/add-friend")
 async def add_friend(req: AddFriendRequest):
-    friend_profile = await db["userprofiles"].find_one({"friendCode": req.friendCode})
+    friend_code = (req.friendCode or "").strip().upper()
+    friend_profile = await db["userprofiles"].find_one({"friendCode": friend_code})
     if not friend_profile:
         raise HTTPException(status_code=404, detail="Friend code not found")
         
     friend_id = friend_profile.get("userId") or friend_profile.get("deviceId")
     caller_id = req.userId
+
+    if not friend_id:
+        raise HTTPException(status_code=400, detail="Invalid friend profile")
 
     if friend_id == caller_id:
         raise HTTPException(status_code=400, detail="Cannot add yourself")
@@ -181,11 +185,10 @@ async def add_friend(req: AddFriendRequest):
         upsert=True
     )
 
-    # Invalidate cache
-    LEADERBOARD_CACHE.pop((caller_id, "weekly"), None)
-    LEADERBOARD_CACHE.pop((caller_id, "all_time"), None)
-    LEADERBOARD_CACHE.pop((friend_id, "weekly"), None)
-    LEADERBOARD_CACHE.pop((friend_id, "all_time"), None)
+    # Invalidate cache for both users
+    for p in ["weekly", "monthly", "all_time"]:
+        LEADERBOARD_CACHE.pop((caller_id, p), None)
+        LEADERBOARD_CACHE.pop((friend_id, p), None)
     
     return {"message": "Friend added successfully"}
 
@@ -201,9 +204,9 @@ async def get_friends_leaderboard(userId: str, period: str = "weekly"):
             return cached_data
 
     friends_doc = await db["friends"].find_one({"userId": userId})
-    friend_ids = friends_doc["friendIds"] if friends_doc else []
+    friend_ids = friends_doc.get("friendIds", []) if friends_doc else []
     
-    user_ids = [userId] + friend_ids
+    user_ids = list(set([userId] + friend_ids))
     
     # Query profiles while respecting privacy configurations
     profiles_cursor = db["userprofiles"].find({
@@ -231,31 +234,34 @@ async def get_friends_leaderboard(userId: str, period: str = "weekly"):
     # Fetch stats
     stats_cursor = db["leaderboard_stats"].find({"userId": {"$in": list(profiles_dict.keys())}})
     stats_list = await stats_cursor.to_list(length=None)
-    stats_dict = {stat["userId"]: stat for stat in stats_list}
+    stats_dict = {stat["userId"]: stat for stat in stats_list} if stats_list else {}
 
     entries = []
     for uid, p in profiles_dict.items():
         stat = stats_dict.get(uid, {})
         
         if period == "all_time":
-            steps = stat.get("allTimeSteps", 0)
-            workouts = stat.get("allTimeWorkouts", 0)
+            steps = stat.get("allTimeSteps", 0) or 0
+            workouts = stat.get("allTimeWorkouts", 0) or 0
         else:
-            steps = stat.get("weeklySteps", 0)
-            workouts = stat.get("workoutsThisWeek", 0)
+            steps = stat.get("weeklySteps", 0) or 0
+            workouts = stat.get("workoutsThisWeek", 0) or 0
 
         # Computed leaderboard score
         score = int(steps * SCORE_STEP_WEIGHT + workouts * SCORE_WORKOUT_WEIGHT)
 
+        name = p.get("name") or p.get("displayName") or "Athlete"
+        initials = p.get("avatarInitials") or (name[0].upper() if name else "A")
+
         entries.append(LeaderboardEntry(
-            userId=uid,
-            friendCode=p.get("friendCode", ""),
-            displayName=p.get("name") or p.get("displayName", "User"),
-            avatarInitials=p.get("name", "U")[0].upper() if p.get("name") else p.get("avatarInitials", "U"),
-            weeklyPoints=score,
-            workoutsThisWeek=workouts,
-            currentStreak=p.get("currentStreak", 0),
-            steps=steps
+            userId=str(uid),
+            friendCode=str(p.get("friendCode") or ""),
+            displayName=str(name),
+            avatarInitials=str(initials),
+            weeklyPoints=int(score),
+            workoutsThisWeek=int(workouts),
+            currentStreak=int(p.get("currentStreak") or 0),
+            steps=int(steps)
         ))
 
     # Sort descending by score

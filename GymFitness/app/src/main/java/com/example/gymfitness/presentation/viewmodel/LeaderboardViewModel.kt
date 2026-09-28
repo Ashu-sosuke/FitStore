@@ -81,13 +81,21 @@ class LeaderboardViewModel @Inject constructor(
                         }
                     }.catch { e ->
                         _uiState.value = LeaderboardUiState.Error(e.message ?: "Unknown error")
-                    }.collect { finalEntries ->
                         _uiState.value = LeaderboardUiState.Success(
                             entries = finalEntries,
                             period = period,
-                            currentUserEntry = finalEntries.find { it.isCurrentUser } ?: finalEntries.first()
+                            currentUserEntry = finalEntries.find { it.isCurrentUser } ?: finalEntries.firstOrNull() ?: LeaderboardEntry(
+                                userId = deviceId,
+                                displayName = profile?.name ?: "You",
+                                avatarInitials = (profile?.name ?: "Y").take(1).uppercase(),
+                                avatarColor = Color(0xFFD0FD3E),
+                                weeklyPoints = 0,
+                                workoutsThisWeek = 0,
+                                currentStreak = profile?.currentStreak ?: 0,
+                                isCurrentUser = true,
+                                steps = 0
+                            )
                         )
-                    }
                 }
             }
         }

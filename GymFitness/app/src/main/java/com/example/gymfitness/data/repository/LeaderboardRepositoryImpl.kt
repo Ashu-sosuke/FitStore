@@ -54,12 +54,13 @@ class LeaderboardRepositoryImpl @Inject constructor(
 
     override suspend fun addFriend(friendCode: String): Result<Unit> {
         return try {
-            val response = apiService.addFriend(AddFriendRequest(deviceId, friendCode))
+            val response = apiService.addFriend(AddFriendRequest(deviceId, friendCode.trim().uppercase()))
             if (response.isSuccessful) {
                 refreshLeaderboard(LeaderboardPeriod.WEEKLY)
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Failed to add friend"))
+                val errorMsg = response.errorBody()?.string() ?: "Failed to add friend"
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -8,9 +8,9 @@ import com.example.gymfitness.domain.models.LeaderboardEntry
 fun LeaderboardEntryDto.toEntity(period: String): LeaderboardEntity {
     return LeaderboardEntity(
         userId = userId,
-        friendCode = friendCode,
-        displayName = displayName,
-        avatarInitials = avatarInitials,
+        friendCode = friendCode ?: "",
+        displayName = displayName ?: "Athlete",
+        avatarInitials = avatarInitials ?: "A",
         weeklyPoints = weeklyPoints,
         workoutsThisWeek = workoutsThisWeek,
         currentStreak = currentStreak,
@@ -26,12 +26,12 @@ fun LeaderboardEntity.toDomain(currentUserDeviceId: String): LeaderboardEntry {
         Color(0xFFB983FF),
         Color(0xFFFF2D55)
     )
-    val colorIndex = Math.abs(userId.hashCode()) % colors.size
+    val colorIndex = (userId.hashCode() and 0x7FFFFFFF) % colors.size
     
     return LeaderboardEntry(
         userId = userId,
-        displayName = displayName,
-        avatarInitials = avatarInitials,
+        displayName = if (displayName.isBlank()) "Athlete" else displayName,
+        avatarInitials = if (avatarInitials.isBlank()) "A" else avatarInitials.take(2),
         avatarColor = colors[colorIndex],
         weeklyPoints = weeklyPoints,
         workoutsThisWeek = workoutsThisWeek,
