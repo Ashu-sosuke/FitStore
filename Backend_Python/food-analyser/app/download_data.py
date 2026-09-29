@@ -184,11 +184,20 @@ def _split_dataset() -> None:
 
         label = label_dir.name
         images = sorted(label_dir.glob("*"))
+        if not images:
+            print(f"  {label:12s} -> skipped (0 valid images)")
+            continue
+
         random.shuffle(images)
 
         split_idx = int(len(images) * TRAIN_SPLIT)
+        if split_idx == len(images):
+            split_idx = max(len(images) - 1, 1)
+        if split_idx == 0:
+            split_idx = 1
+
         train_imgs = images[:split_idx]
-        val_imgs = images[split_idx:]
+        val_imgs = images[split_idx:] if len(images) > 1 else images[:1]
 
         # Copy to train/
         train_out = TRAIN_DIR / label

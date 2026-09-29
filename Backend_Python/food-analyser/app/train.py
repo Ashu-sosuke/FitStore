@@ -23,6 +23,7 @@ import argparse
 import copy
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -112,6 +113,24 @@ def _get_dataloaders(batch_size: int) -> tuple[DataLoader, DataLoader, list[str]
         print("[ERROR] Dataset not found. Run first:")
         print("        python -m app.download_data")
         sys.exit(1)
+
+    # Clean up empty folders in train/ and val/ so ImageFolder only loads populated classes
+    for split_dir in (TRAIN_DIR, VAL_DIR):
+        for folder in list(split_dir.iterdir()):
+            if folder.is_dir() and not list(folder.glob("*")):
+                shutil.rmtree(folder)
+
+    # Remove any classes present in train but missing in val or vice versa
+    train_classes = {d.name for d in TRAIN_DIR.iterdir() if d.is_dir() and list(d.glob("*"))}
+    val_classes = {d.name for d in VAL_DIR.iterdir() if d.is_dir() and list(d.glob("*"))}
+    valid_classes = train_classes.intersection(val_classes)
+
+    for d in list(TRAIN_DIR.iterdir()):
+        if d.is_dir() and d.name not in valid_classes:
+            shutil.rmtree(d)
+    for d in list(VAL_DIR.iterdir()):
+        if d.is_dir() and d.name not in valid_classes:
+            shutil.rmtree(d)
 
     train_dataset = datasets.ImageFolder(str(TRAIN_DIR), transform=_train_transforms)
     val_dataset = datasets.ImageFolder(str(VAL_DIR), transform=_val_transforms)
