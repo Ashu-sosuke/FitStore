@@ -20,6 +20,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -70,6 +72,7 @@ import kotlin.math.roundToInt
 fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltViewModel()) {
     val context = LocalContext.current
     var isScannerActive by remember { mutableStateOf(false) }
+    var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isFlashEnabled by remember { mutableStateOf(false) }
     var showFoodLibrary by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Personalized Diet Plan, 1: Logged Meals Today
@@ -79,6 +82,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
 
     val scannedResult by viewModel.scannedFood.collectAsState()
     val isAnalyzing by viewModel.isAnalyzing.collectAsState()
+    val scanError by viewModel.scanError.collectAsState()
     val scanAlternatives by viewModel.scanAlternatives.collectAsState()
     val todayMeals by viewModel.todayMeals.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
@@ -94,6 +98,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
                 if (bitmap != null) {
+                    capturedBitmap = bitmap
                     isScannerActive = true
                     viewModel.analyzeCapturedBitmap(bitmap)
                 }
@@ -121,12 +126,21 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
             var triggerCapture by remember { mutableStateOf(false) }
 
             Box(Modifier.fillMaxSize()) {
-                if (cameraPermissionState.status.isGranted) {
+                if (capturedBitmap != null) {
+                    // Instantly display the saved/frozen photo
+                    Image(
+                        bitmap = capturedBitmap!!.asImageBitmap(),
+                        contentDescription = "Captured Meal",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else if (cameraPermissionState.status.isGranted) {
                     CameraCaptureOverlay(
                         isFlashEnabled = isFlashEnabled,
                         triggerCapture = triggerCapture,
                         onPhotoCaptured = { bitmap ->
                             triggerCapture = false
+                            capturedBitmap = bitmap
                             viewModel.analyzeCapturedBitmap(bitmap)
                         }
                     )
@@ -145,52 +159,54 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     }
                 }
 
-                // Camera Cutout Mask
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                ) {
-                    drawRect(color = Color.Black.copy(alpha = 0.72f))
-                    val sizePx = 290.dp.toPx()
-                    val left = (size.width - sizePx) / 2
-                    val top = (size.height - sizePx) / 2 - 40.dp.toPx()
-                    val cornerRadiusPx = 32.dp.toPx()
+                // Camera Cutout Mask & Laser line (drawn during viewfinder and background scan)
+                if (scanError == null || isAnalyzing) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    ) {
+                        drawRect(color = Color.Black.copy(alpha = if (capturedBitmap != null) 0.50f else 0.72f))
+                        val sizePx = 290.dp.toPx()
+                        val left = (size.width - sizePx) / 2
+                        val top = (size.height - sizePx) / 2 - 40.dp.toPx()
+                        val cornerRadiusPx = 32.dp.toPx()
 
-                    // Cutout
-                    drawRoundRect(
-                        color = Color.Transparent,
-                        topLeft = androidx.compose.ui.geometry.Offset(left, top),
-                        size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear
-                    )
+                        // Cutout
+                        drawRoundRect(
+                            color = Color.Transparent,
+                            topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                            size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.Clear
+                        )
 
-                    // Glowing border
-                    drawRoundRect(
-                        color = SunsetOrange,
-                        topLeft = androidx.compose.ui.geometry.Offset(left, top),
-                        size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                        style = Stroke(width = 3.dp.toPx())
-                    )
+                        // Glowing border
+                        drawRoundRect(
+                            color = SunsetOrange,
+                            topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                            size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            style = Stroke(width = 3.dp.toPx())
+                        )
 
-                    // Laser line
-                    val laserY = top + sizePx * laserPosition
-                    drawLine(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                SunsetOrange.copy(alpha = 0.0f),
-                                SunsetOrange,
-                                SunsetOrange.copy(alpha = 0.0f)
+                        // Laser line
+                        val laserY = top + sizePx * laserPosition
+                        drawLine(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    SunsetOrange.copy(alpha = 0.0f),
+                                    SunsetOrange,
+                                    SunsetOrange.copy(alpha = 0.0f)
+                                ),
+                                startY = laserY - 8.dp.toPx(),
+                                endY = laserY + 8.dp.toPx()
                             ),
-                            startY = laserY - 8.dp.toPx(),
-                            endY = laserY + 8.dp.toPx()
-                        ),
-                        start = androidx.compose.ui.geometry.Offset(left + 12.dp.toPx(), laserY),
-                        end = androidx.compose.ui.geometry.Offset(left + sizePx - 12.dp.toPx(), laserY),
-                        strokeWidth = 4.dp.toPx()
-                    )
+                            start = androidx.compose.ui.geometry.Offset(left + 12.dp.toPx(), laserY),
+                            end = androidx.compose.ui.geometry.Offset(left + sizePx - 12.dp.toPx(), laserY),
+                            strokeWidth = 4.dp.toPx()
+                        )
+                    }
                 }
 
                 // Top Controls Bar
@@ -203,7 +219,11 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { isScannerActive = false },
+                        onClick = {
+                            isScannerActive = false
+                            capturedBitmap = null
+                            viewModel.clearResult()
+                        },
                         modifier = Modifier.background(Color.Black.copy(alpha = 0.6f), CircleShape)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -212,6 +232,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         IconButton(
                             onClick = { isFlashEnabled = !isFlashEnabled },
+                            enabled = capturedBitmap == null,
                             modifier = Modifier.background(
                                 if (isFlashEnabled) SunsetOrange else Color.Black.copy(alpha = 0.6f),
                                 CircleShape
@@ -233,38 +254,150 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     }
                 }
 
-                // Instruction Callout
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(top = 280.dp)
-                ) {
-                    Text(
-                        text = if (isAnalyzing) "Analyzing food with AI Vision & IFCT 2017..." else "Aim at food & tap Camera Shutter to scan",
-                        color = Color.White,
-                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                // Instruction Callout (when camera preview is idle)
+                if (capturedBitmap == null) {
+                    Box(
                         modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                            .align(Alignment.Center)
+                            .padding(top = 280.dp)
+                    ) {
+                        Text(
+                            text = "Aim at food & tap Camera Shutter to scan",
+                            color = Color.White,
+                            style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
 
-                // Bottom Camera Shutter Button Controls
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = 32.dp)
-                ) {
-                    if (isAnalyzing) {
+                // Status or Bottom Controls Area
+                if (capturedBitmap != null && isAnalyzing) {
+                    // Scanning in Background Status Banner
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color.Black.copy(alpha = 0.88f),
+                        border = BorderStroke(2.dp, SunsetOrange),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp, vertical = 32.dp)
+                            .fillMaxWidth()
+                    ) {
                         Column(
+                            modifier = Modifier.padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            CircularProgressIndicator(color = SunsetOrange, strokeWidth = 3.dp, modifier = Modifier.size(42.dp))
-                            Text("Processing Nutrition...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    color = SunsetOrange,
+                                    strokeWidth = 3.dp,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "⚡ AI SCANNING IN BACKGROUND",
+                                    color = SunsetOrange,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                            Text(
+                                "Image saved! AI Vision is analyzing your meal & calculating exact nutrition...",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
+                            )
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = SunsetOrange,
+                                trackColor = Color.White.copy(alpha = 0.2f)
+                            )
                         }
-                    } else {
+                    }
+                } else if (capturedBitmap != null && scanError != null && scannedResult == null) {
+                    // Error Card with Retake & Search Options
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color.Black.copy(alpha = 0.92f),
+                        border = BorderStroke(2.dp, ErrorRed),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WarningAmber,
+                                contentDescription = "Error",
+                                tint = ErrorRed,
+                                modifier = Modifier.size(42.dp)
+                            )
+                            Text(
+                                "Could Not Recognize Food",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = scanError ?: "The meal could not be identified with confidence. Ensure good lighting or search directly.",
+                                color = TextMutedDark,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        capturedBitmap = null
+                                        viewModel.clearScanError()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SunsetOrange),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("📸 Retake", fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        capturedBitmap = null
+                                        isScannerActive = false
+                                        viewModel.clearScanError()
+                                        showFoodLibrary = true
+                                    },
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("🔍 Search", color = Color.White)
+                                }
+                            }
+                        }
+                    }
+                } else if (capturedBitmap == null) {
+                    // Live Camera Viewfinder Controls
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(bottom = 32.dp)
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -304,7 +437,11 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
 
                             // Close scanner shortcut
                             IconButton(
-                                onClick = { isScannerActive = false },
+                                onClick = {
+                                    isScannerActive = false
+                                    capturedBitmap = null
+                                    viewModel.clearResult()
+                                },
                                 modifier = Modifier
                                     .size(48.dp)
                                     .background(Color.Black.copy(alpha = 0.6f), CircleShape)
@@ -357,6 +494,9 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                         IconButton(
                             onClick = {
                                 if (cameraPermissionState.status.isGranted) {
+                                    capturedBitmap = null
+                                    viewModel.clearResult()
+                                    viewModel.clearScanError()
                                     isScannerActive = true
                                 } else {
                                     cameraPermissionState.launchPermissionRequest()
@@ -533,6 +673,9 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                             Button(
                                 onClick = {
                                     if (cameraPermissionState.status.isGranted) {
+                                        capturedBitmap = null
+                                        viewModel.clearResult()
+                                        viewModel.clearScanError()
                                         isScannerActive = true
                                     } else {
                                         cameraPermissionState.launchPermissionRequest()
@@ -612,8 +755,12 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                         viewModel.logScannedFood(scaledMeal, qtyGrams, mealType)
                         Toast.makeText(context, "Added ${scaledMeal.name} (${qtyGrams.toInt()}g) to today's log!", Toast.LENGTH_SHORT).show()
                         isScannerActive = false
+                        capturedBitmap = null
                     },
-                    onCancel = { viewModel.clearResult() }
+                    onCancel = {
+                        viewModel.clearResult()
+                        capturedBitmap = null
+                    }
                 )
             }
         }

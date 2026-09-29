@@ -120,29 +120,17 @@ class MealViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Log.e("SCANNER", "❌ Error during scan: ${e.localizedMessage}")
-                _scanError.value = e.localizedMessage
-
-                // Graceful intelligent fallback so user can still log food smoothly
-                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-                val mappedMealType = when (hour) {
-                    in 5..10 -> "breakfast"
-                    in 11..15 -> "lunch"
-                    in 18..22 -> "dinner"
-                    else -> "snack"
-                }
-                _scannedFood.value = MealEntity(
-                    name = "Dal Tadka",
-                    calories = 180f,
-                    proteinG = 9f,
-                    carbsG = 22f,
-                    fatG = 6f,
-                    mealType = mappedMealType
-                )
-                _scanAlternatives.value = listOf("Dal Tadka", "Steamed Rice", "Paneer Butter Masala", "Chicken Biryani", "Roti")
+                _scanError.value = e.localizedMessage ?: "Could not recognize food item. Please try again."
+                _scannedFood.value = null
+                _scanAlternatives.value = emptyList()
             } finally {
                 _isAnalyzing.value = false
             }
         }
+    }
+
+    fun clearScanError() {
+        _scanError.value = null
     }
 
     /**
