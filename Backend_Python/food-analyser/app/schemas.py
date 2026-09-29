@@ -49,6 +49,10 @@ class ScanFoodResponse(BaseModel):
         ...,
         description="ISO-8601 timestamp of the created daily_log entry",
     )
+    top_alternatives: list[str] | None = Field(
+        default=None,
+        description="List of top 2-3 alternative food predictions",
+    )
     message: str = "Food identified and logged successfully"
 
 

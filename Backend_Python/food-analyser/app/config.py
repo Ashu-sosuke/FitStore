@@ -19,7 +19,7 @@ PORT: int = int(os.getenv("PORT", "8000"))
 
 # ── ML Model ─────────────────────────────────────────────────────────────────
 MODEL_NAME: str = os.getenv("MODEL_NAME", "mobilenet_v2")
-CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.60"))
+CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.35"))
 
 # Supported food labels the model can predict
 FOOD_LABELS: list[str] = [

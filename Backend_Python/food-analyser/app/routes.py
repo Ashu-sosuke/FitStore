@@ -35,6 +35,16 @@ _FALLBACK_NUTRIENTS = {
     "Broccoli": {"calories": 34, "protein_g": 2.8, "carbs_g": 6.6, "fats_g": 0.4},
     "Avocado": {"calories": 160, "protein_g": 2.0, "carbs_g": 8.5, "fats_g": 14.7},
     "Salmon": {"calories": 208, "protein_g": 20.0, "carbs_g": 0.0, "fats_g": 13.0},
+    "Banana": {"calories": 89, "protein_g": 1.1, "carbs_g": 22.8, "fats_g": 0.3},
+    "Apple": {"calories": 52, "protein_g": 0.3, "carbs_g": 13.8, "fats_g": 0.2},
+    "Bread": {"calories": 265, "protein_g": 9.0, "carbs_g": 49.0, "fats_g": 3.2},
+    "Burger": {"calories": 295, "protein_g": 17.0, "carbs_g": 24.0, "fats_g": 14.0},
+    "Orange": {"calories": 47, "protein_g": 0.9, "carbs_g": 11.8, "fats_g": 0.1},
+    "Pasta": {"calories": 131, "protein_g": 5.0, "carbs_g": 25.0, "fats_g": 1.1},
+    "Pizza": {"calories": 266, "protein_g": 11.0, "carbs_g": 33.0, "fats_g": 10.0},
+    "Potato": {"calories": 77, "protein_g": 2.0, "carbs_g": 17.0, "fats_g": 0.1},
+    "Rice": {"calories": 130, "protein_g": 2.7, "carbs_g": 28.0, "fats_g": 0.3},
+    "Salad": {"calories": 45, "protein_g": 1.5, "carbs_g": 7.0, "fats_g": 1.2},
 }
 
 
@@ -93,16 +103,14 @@ async def scan_food(
 
     food_label: str = prediction["food_label"]
     confidence: float = prediction["confidence"]
+    all_scores: dict[str, float] = prediction.get("all_scores", {})
+    sorted_scores = sorted(all_scores.items(), key=lambda x: -x[1])
 
-    if food_label == "Unknown":
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "Could not confidently identify the food item. "
-                f"Best guess confidence was {confidence:.1%} which is below "
-                "the acceptance threshold."
-            ),
-        )
+    if (food_label == "Unknown" or not food_label) and sorted_scores:
+        food_label = sorted_scores[0][0]
+        confidence = sorted_scores[0][1]
+
+    top_alternatives = [label for label, _ in sorted_scores if label != food_label][:3]
 
     # ── 3. Look up nutrients in MongoDB ──────────────────────────────────
     nutrient_doc = None
@@ -172,5 +180,6 @@ async def scan_food(
         calories=macros.calories,
         macros=macros,
         confidence=confidence,
+        top_alternatives=top_alternatives,
         logged_at=timestamp_iso,
     )
