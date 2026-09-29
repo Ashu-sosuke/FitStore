@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import io
@@ -349,31 +350,44 @@ class VisionService:
 
     async def _call_gemini_vision(self, image_bytes: bytes, api_key: str) -> Optional[VisionResult]:
         """
-        Calls Google Gemini Vision API (1.5 Flash / 2.0 Flash) with structured JSON output schema.
+        Calls Google Gemini Vision API with structured JSON output schema.
+        Uses gemini-2.0-flash (best accuracy/speed) with fallback models.
         """
         import re
         b64_image = base64.b64encode(image_bytes).decode("utf-8")
         
         models_to_try = [
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash-latest"
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash",
         ]
 
         prompt = (
-            "You are an expert Indian food nutritionist and computer vision system. "
-            "Analyze this image carefully. Identify the food accurately (e.g., Dal Tadka, Paneer Butter Masala, Roti, Chicken Biryani, Idli, Dosa, Rice, Rajma, Chole, Poha, Samosa, Egg Curry, etc.). "
-            "Respond ONLY with a valid JSON object matching this schema without markdown fences:\n"
+            "You are an expert food identification system specializing in Indian cuisine. "
+            "Analyze this food image with extreme precision. "
+            "\n\nIDENTIFICATION RULES:\n"
+            "1. Look at the ACTUAL food in the image — texture, color, shape, garnish, serving style.\n"
+            "2. Differentiate carefully between visually similar dishes:\n"
+            "   - Dal Makhani (black lentils, creamy) vs Dal Tadka (yellow lentils, thin) vs Rajma (kidney beans)\n"
+            "   - Roti (flat, dry) vs Naan (puffy, buttery) vs Paratha (layered, oily)\n"
+            "   - Chicken Biryani (layered rice with meat) vs Pulao (mixed rice) vs Jeera Rice (plain with cumin)\n"
+            "   - Paneer Butter Masala (orange gravy, paneer cubes) vs Butter Chicken (chicken pieces) vs Shahi Paneer\n"
+            "   - Idli (white, round, steamed) vs Dosa (thin crepe) vs Uttapam (thick pancake)\n"
+            "3. If the image contains multiple items on a plate (e.g., rice + dal + sabzi), list ALL items separately.\n"
+            "4. If you're NOT confident, set confidence below 0.7 and provide more alternatives.\n"
+            "5. Estimate weight in grams based on visual portion size.\n"
+            "\nRespond ONLY with a valid JSON object (no markdown fences):\n"
             "{\n"
             '  "is_food": true/false,\n'
-            '  "primary_food_name": "Exact Indian food or dish name",\n'
+            '  "primary_food_name": "Exact food name (e.g., Chicken Biryani, Masala Dosa, Palak Paneer)",\n'
             '  "cuisine": "Indian" or other,\n'
             '  "estimated_grams": total estimated weight in grams (number),\n'
             '  "confidence": float between 0.0 and 1.0,\n'
-            '  "items": [{"name": "Specific component food name", "estimated_grams": number}],\n'
-            '  "top_alternatives": ["alternative dish 1", "alternative dish 2", "alternative dish 3"]\n'
+            '  "items": [{"name": "Component food name", "estimated_grams": number}],\n'
+            '  "top_alternatives": ["alternative 1", "alternative 2", "alternative 3"]\n'
             "}\n"
-            "CRITICAL: Do NOT estimate or return calories or macros. ONLY identify the food items and portion weights."
+            "CRITICAL: Only identify. Do NOT return calories or macros."
         )
 
         payload = {
@@ -396,24 +410,34 @@ class VisionService:
             }
         }
 
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             for model_name in models_to_try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-                try:
-                    resp = await client.post(url, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                        # Clean any surrounding markdown fences
-                        text_content = re.sub(r"^```(?:json)?\s*", "", text_content)
-                        text_content = re.sub(r"\s*```$", "", text_content)
-                        parsed = json.loads(text_content)
-                        parsed["vision_provider"] = f"gemini_{model_name}"
-                        return VisionResult(**parsed)
-                    else:
-                        logger.warning(f"Gemini model {model_name} returned status {resp.status_code}: {resp.text}")
-                except Exception as model_err:
-                    logger.warning(f"Error calling {model_name}: {model_err}")
+                # Retry up to 2 times for 503 (overloaded) errors
+                for attempt in range(3):
+                    try:
+                        logger.info(f"[GEMINI] Calling {model_name} (attempt {attempt+1})...")
+                        resp = await client.post(url, json=payload)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                            text_content = re.sub(r"^```(?:json)?\s*", "", text_content)
+                            text_content = re.sub(r"\s*```$", "", text_content)
+                            parsed = json.loads(text_content)
+                            parsed["vision_provider"] = f"gemini_{model_name}"
+                            logger.info(f"[GEMINI] {model_name} identified: {parsed.get('primary_food_name', 'Unknown')}")
+                            return VisionResult(**parsed)
+                        elif resp.status_code == 503 and attempt < 2:
+                            wait_time = (attempt + 1) * 2
+                            logger.info(f"[GEMINI] {model_name} overloaded (503), retrying in {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                            continue
+                        else:
+                            logger.warning(f"Gemini {model_name} returned {resp.status_code}: {resp.text[:200]}")
+                            break  # Try next model
+                    except Exception as model_err:
+                        logger.warning(f"Error calling {model_name}: {model_err}")
+                        break  # Try next model
 
         return None
 
