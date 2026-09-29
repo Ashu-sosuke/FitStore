@@ -103,9 +103,12 @@ async def scan_food(
 
         # If quantity_override_grams provided by user and single item, apply override
         items_to_process = vision_res.items or [{"name": vision_res.primary_food_name, "estimated_grams": vision_res.estimated_grams}]
-        if quantity_override_grams is not None and quantity_override_grams > 0:
+        if isinstance(quantity_override_grams, (int, float)) and quantity_override_grams > 0:
             if len(items_to_process) == 1:
-                items_to_process[0].estimated_grams = quantity_override_grams
+                if hasattr(items_to_process[0], "estimated_grams"):
+                    items_to_process[0].estimated_grams = quantity_override_grams
+                elif isinstance(items_to_process[0], dict):
+                    items_to_process[0]["estimated_grams"] = quantity_override_grams
 
         for raw_item in items_to_process:
             grams = raw_item.estimated_grams if hasattr(raw_item, "estimated_grams") else raw_item.get("estimated_grams", 100.0)

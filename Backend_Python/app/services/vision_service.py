@@ -12,6 +12,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 import httpx
 from PIL import Image, ImageStat
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +133,10 @@ class VisionService:
 
     async def analyze_image(self, image_bytes: bytes) -> VisionResult:
         """
-        Processes image through image preprocessing, cache lookup, and runs the local
-        dataset-trained MobileNetV2 classifier directly (<50ms, 100% offline, guaranteed demo reliability).
+        Processes image through image preprocessing, cache lookup, and runs:
+        1. Cloud VLM (Google Gemini 3.5 Flash) for high-accuracy food & screen recognition.
+        2. Fast offline fallback to local dataset-trained MobileNetV2 classifier.
+        3. Color/texture perceptual analysis.
         """
         processed_bytes = self.resize_image_if_needed(image_bytes, max_dim=1024)
         image_hash = self.compute_sha256(processed_bytes)
@@ -141,14 +146,8 @@ class VisionService:
         if cached:
             return cached
 
-        # 2. Run Local Dataset Classifier directly (Primary Engine for Demo)
-        local_result = self._infer_local(processed_bytes)
-        if local_result and local_result.is_food:
-            self._put_in_cache(image_hash, local_result)
-            return local_result
-
-        # 3. Optional Fallback to VLM if local failed or inconclusive (and keys configured)
-        gemini_key = os.getenv("GEMINI_API_KEY")
+        # 2. Try Gemini Vision VLM First (High precision across thousands of foods, fruits & labels)
+        gemini_key = os.getenv("GEMINI_API_KEY") or self.gemini_api_key
         if gemini_key:
             try:
                 vlm_result = await self._call_gemini_vision(processed_bytes, gemini_key)
@@ -156,9 +155,15 @@ class VisionService:
                     self._put_in_cache(image_hash, vlm_result)
                     return vlm_result
             except Exception as e:
-                logger.warning(f"Gemini VLM fallback call failed: {e}")
+                logger.warning(f"Gemini VLM call error: {e}")
 
-        # Fallback to local perceptual / default
+        # 3. Fallback to Local Dataset Classifier (MobileNetV2 offline engine)
+        local_result = self._infer_local(processed_bytes)
+        if local_result and local_result.is_food:
+            self._put_in_cache(image_hash, local_result)
+            return local_result
+
+        # 4. Fallback to local perceptual / default
         self._put_in_cache(image_hash, local_result)
         return local_result
 
@@ -368,37 +373,32 @@ class VisionService:
         b64_image = base64.b64encode(image_bytes).decode("utf-8")
         
         models_to_try = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-2.5-flash",
-            "gemini-1.5-pro",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest",
         ]
 
         prompt = (
-            "You are an expert food identification system specializing in Indian cuisine. "
-            "Analyze this food image with extreme precision. "
+            "You are an expert food identification AI. "
+            "Analyze this food image with high precision. "
             "\n\nIDENTIFICATION RULES:\n"
-            "1. Look at the ACTUAL food in the image — texture, color, shape, garnish, serving style.\n"
-            "2. Differentiate carefully between visually similar dishes:\n"
-            "   - Dal Makhani (black lentils, creamy) vs Dal Tadka (yellow lentils, thin) vs Rajma (kidney beans)\n"
-            "   - Roti (flat, dry) vs Naan (puffy, buttery) vs Paratha (layered, oily)\n"
-            "   - Chicken Biryani (layered rice with meat) vs Pulao (mixed rice) vs Jeera Rice (plain with cumin)\n"
-            "   - Paneer Butter Masala (orange gravy, paneer cubes) vs Butter Chicken (chicken pieces) vs Shahi Paneer\n"
-            "   - Idli (white, round, steamed) vs Dosa (thin crepe) vs Uttapam (thick pancake)\n"
-            "3. If the image contains multiple items on a plate (e.g., rice + dal + sabzi), list ALL items separately.\n"
-            "4. If you're NOT confident, set confidence below 0.7 and provide more alternatives.\n"
-            "5. Estimate weight in grams based on visual portion size.\n"
-            "\nRespond ONLY with a valid JSON object (no markdown fences):\n"
+            "1. If this is a food item, identify it specifically (e.g. Banana, Apple, Pizza, Samosa, Biryani, Roti, Chicken, Salmon, Rice, Egg, Milk).\n"
+            "2. If this image is a photo of a screen, display, label, or packaging displaying a food item or food name (e.g. 'Banana'), recognize that intended food item.\n"
+            "3. If multiple items are present, identify the primary dish and list components in 'items'.\n"
+            "4. Provide realistic top 2-3 alternatives in 'top_alternatives'.\n"
+            "5. Estimate standard serving weight in grams (e.g. Banana = 120g, Apple = 150g, Dal/Curry = 180g, Roti = 40g, Rice = 150g, Milk = 200g).\n"
+            "\nRespond ONLY with a valid JSON object:\n"
             "{\n"
-            '  "is_food": true/false,\n'
-            '  "primary_food_name": "Exact food name (e.g., Chicken Biryani, Masala Dosa, Palak Paneer)",\n'
-            '  "cuisine": "Indian" or other,\n'
-            '  "estimated_grams": total estimated weight in grams (number),\n'
-            '  "confidence": float between 0.0 and 1.0,\n'
-            '  "items": [{"name": "Component food name", "estimated_grams": number}],\n'
-            '  "top_alternatives": ["alternative 1", "alternative 2", "alternative 3"]\n'
+            '  "is_food": true,\n'
+            '  "primary_food_name": "Exact food name (e.g. Banana, Apple, Chicken Biryani)",\n'
+            '  "cuisine": "Indian" or "Fruit" or "Global",\n'
+            '  "estimated_grams": 120.0,\n'
+            '  "confidence": 0.95,\n'
+            '  "items": [{"name": "Banana", "estimated_grams": 120.0}],\n'
+            '  "top_alternatives": ["Plantain", "Apple"]\n'
             "}\n"
-            "CRITICAL: Only identify. Do NOT return calories or macros."
+            "CRITICAL: Only identify food. Do NOT return calories or macros."
         )
 
         payload = {
