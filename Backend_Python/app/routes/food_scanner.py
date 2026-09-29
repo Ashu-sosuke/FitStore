@@ -131,7 +131,7 @@ async def scan_food(
             total_fats += nut_res.macros.fats_g
 
         primary_food = vision_res.primary_food_name
-        if len(item_breakdowns) == 1 and item_breakdowns[0].matched_name:
+        if len(item_breakdowns) == 1 and item_breakdowns[0].matched_name and item_breakdowns[0].matched_name != "Not Found":
             primary_food = item_breakdowns[0].matched_name
 
         # 3. Log Entry in daily_logs with verified user_id

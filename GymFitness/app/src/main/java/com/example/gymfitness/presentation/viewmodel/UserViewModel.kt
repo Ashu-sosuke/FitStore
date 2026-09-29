@@ -28,6 +28,7 @@ class UserViewModel @Inject constructor(
     private val repository: UserRepository,
     private val workoutRepository: WorkoutRepository,
     private val generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase,
+    private val generateNutritionPlanUseCase: com.example.gymfitness.domain.usecase.meal.GenerateNutritionPlanUseCase,
     private val db: com.example.gymfitness.data.local.database.AppDatabase,
     private val tokenManager: TokenManager,
     @ApplicationContext private val context: Context
@@ -309,6 +310,13 @@ class UserViewModel @Inject constructor(
 
             // Save user profile immediately to Room & Remote MongoDB
             repository.saveProfile(newUser)
+
+            // Generate personalized nutritionist meal plan based on onboarding answers
+            try {
+                generateNutritionPlanUseCase(newUser)
+            } catch (e: Exception) {
+                android.util.Log.e("USER_VM", "Failed to generate nutrition plan: ${e.message}")
+            }
 
             // Generate & adopt intelligent multi-factor AI workout plan
             try {

@@ -1,11 +1,18 @@
 package com.example.gymfitness.presentation.screen.meals
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -13,13 +20,11 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -30,9 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.gymfitness.data.local.entity.MealEntity
 import com.example.gymfitness.data.remote.api.toRotatedBitmap
+import com.example.gymfitness.domain.models.PlannedMealItem
 import com.example.gymfitness.presentation.components.BaseCard
 import com.example.gymfitness.presentation.components.PrimaryButton
 import com.example.gymfitness.presentation.components.PrimaryInputField
@@ -52,61 +62,102 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import java.time.LocalDate
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
+import kotlin.math.roundToInt
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltViewModel()) {
+    val context = LocalContext.current
     var isScannerActive by remember { mutableStateOf(false) }
     var isFlashEnabled by remember { mutableStateOf(false) }
     var showFoodLibrary by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Personalized Diet Plan, 1: Logged Meals Today
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+
     val scannedResult by viewModel.scannedFood.collectAsState()
+    val isAnalyzing by viewModel.isAnalyzing.collectAsState()
+    val scanAlternatives by viewModel.scanAlternatives.collectAsState()
+    val todayMeals by viewModel.todayMeals.collectAsState()
+    val userProfile by viewModel.userProfile.collectAsState()
+    val personalizedPlan by viewModel.personalizedPlan.collectAsState()
+
+    // Gallery Picker Launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+                if (bitmap != null) {
+                    isScannerActive = true
+                    viewModel.analyzeCapturedBitmap(bitmap)
+                }
+            } catch (e: Exception) {
+                Log.e("GALLERY", "Failed to decode image: ${e.message}")
+                Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(PageBg)) {
         if (isScannerActive) {
-            val isAnalyzing by viewModel.isAnalyzing.collectAsState()
+            // CAMERA SCANNER OVERLAY
             val infiniteTransition = rememberInfiniteTransition(label = "scanner")
             val laserPosition by infiniteTransition.animateFloat(
                 initialValue = 0f,
                 targetValue = 1f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 2000, easing = LinearEasing),
+                    animation = tween(durationMillis = 1800, easing = LinearEasing),
                     repeatMode = RepeatMode.Reverse
                 ),
                 label = "laser"
             )
 
+            var triggerCapture by remember { mutableStateOf(false) }
+
             Box(Modifier.fillMaxSize()) {
                 if (cameraPermissionState.status.isGranted) {
-                    CameraPreviewOverlay(
+                    CameraCaptureOverlay(
                         isFlashEnabled = isFlashEnabled,
-                        isAnalyzingEnabled = !isAnalyzing && scannedResult == null,
-                        onFrameCaptured = { bitmap ->
-                            viewModel.identifyFoodWithFastAPI(bitmap)
-                        },
-                        onBarcodeDetected = { barcode ->
-                            Log.d("SCANNER", "Barcode detected: $barcode")
+                        triggerCapture = triggerCapture,
+                        onPhotoCaptured = { bitmap ->
+                            triggerCapture = false
+                            viewModel.analyzeCapturedBitmap(bitmap)
                         }
                     )
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                            Text("Camera permission is required to scan food items", color = Color.White, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { cameraPermissionState.launchPermissionRequest() },
+                                colors = ButtonDefaults.buttonColors(containerColor = SunsetOrange)
+                            ) {
+                                Text("Grant Permission")
+                            }
+                        }
+                    }
                 }
-                
-                // Camera Mask Overlay
+
+                // Camera Cutout Mask
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                 ) {
-                    drawRect(color = Color.Black.copy(alpha = 0.7f))
-                    val sizePx = 280.dp.toPx()
+                    drawRect(color = Color.Black.copy(alpha = 0.72f))
+                    val sizePx = 290.dp.toPx()
                     val left = (size.width - sizePx) / 2
-                    val top = (size.height - sizePx) / 2
+                    val top = (size.height - sizePx) / 2 - 40.dp.toPx()
                     val cornerRadiusPx = 32.dp.toPx()
 
-                    // Clear the cutout
+                    // Cutout
                     drawRoundRect(
                         color = Color.Transparent,
                         topLeft = androidx.compose.ui.geometry.Offset(left, top),
@@ -115,7 +166,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                         blendMode = androidx.compose.ui.graphics.BlendMode.Clear
                     )
 
-                    // Draw the glowing neon border
+                    // Glowing border
                     drawRoundRect(
                         color = SunsetOrange,
                         topLeft = androidx.compose.ui.geometry.Offset(left, top),
@@ -124,7 +175,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                         style = Stroke(width = 3.dp.toPx())
                     )
 
-                    // Laser scanning line inside the cutout
+                    // Laser line
                     val laserY = top + sizePx * laserPosition
                     drawLine(
                         brush = Brush.verticalGradient(
@@ -133,8 +184,8 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                                 SunsetOrange,
                                 SunsetOrange.copy(alpha = 0.0f)
                             ),
-                            startY = laserY - 6.dp.toPx(),
-                            endY = laserY + 6.dp.toPx()
+                            startY = laserY - 8.dp.toPx(),
+                            endY = laserY + 8.dp.toPx()
                         ),
                         start = androidx.compose.ui.geometry.Offset(left + 12.dp.toPx(), laserY),
                         end = androidx.compose.ui.geometry.Offset(left + sizePx - 12.dp.toPx(), laserY),
@@ -142,101 +193,131 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     )
                 }
 
-                // Instructions and analyzing feedback
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(top = 370.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Align food or barcode inside the frame",
-                        color = Color.White,
-                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    if (isAnalyzing) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                color = SunsetOrange,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Analyzing item...",
-                                color = SunsetOrange,
-                                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-                }
-
-                // Bottom Action: Snap & Scan Button
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 36.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            // Manual shutter triggers immediate scan
-                        },
-                        enabled = !isAnalyzing,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SunsetOrange,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(28.dp),
-                        modifier = Modifier
-                            .height(52.dp)
-                            .padding(horizontal = 24.dp)
-                    ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Hold Steady or Tap to Scan", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
-
-                // Controls
+                // Top Controls Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
                         onClick = { isScannerActive = false },
-                        modifier = Modifier.background(Color.White.copy(alpha = 0.8f), CircleShape)
+                        modifier = Modifier.background(Color.Black.copy(alpha = 0.6f), CircleShape)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = InkBlack)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
 
-                    IconButton(
-                        onClick = { isFlashEnabled = !isFlashEnabled },
-                        modifier = Modifier.background(if (isFlashEnabled) SunsetOrange else Color.White.copy(alpha = 0.8f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (isFlashEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                            contentDescription = "Flash Toggle",
-                            tint = if (isFlashEnabled) Color.White else InkBlack
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        IconButton(
+                            onClick = { isFlashEnabled = !isFlashEnabled },
+                            modifier = Modifier.background(
+                                if (isFlashEnabled) SunsetOrange else Color.Black.copy(alpha = 0.6f),
+                                CircleShape
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (isFlashEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                                contentDescription = "Flash Toggle",
+                                tint = Color.White
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { galleryLauncher.launch("image/*") },
+                            modifier = Modifier.background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Pick Image", tint = Color.White)
+                        }
+                    }
+                }
+
+                // Instruction Callout
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(top = 280.dp)
+                ) {
+                    Text(
+                        text = if (isAnalyzing) "Analyzing food with AI Vision & IFCT 2017..." else "Aim at food & tap Camera Shutter to scan",
+                        color = Color.White,
+                        style = Typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Bottom Camera Shutter Button Controls
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 32.dp)
+                ) {
+                    if (isAnalyzing) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            CircularProgressIndicator(color = SunsetOrange, strokeWidth = 3.dp, modifier = Modifier.size(42.dp))
+                            Text("Processing Nutrition...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            // Gallery shortcut
+                            IconButton(
+                                onClick = { galleryLauncher.launch("image/*") },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Image, contentDescription = "Gallery", tint = Color.White)
+                            }
+
+                            // Large Shutter Button
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(4.dp, SunsetOrange, CircleShape)
+                                    .clickable { triggerCapture = true }
+                                    .padding(6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                        .background(SunsetOrange),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = "Capture", tint = Color.White, modifier = Modifier.size(32.dp))
+                                }
+                            }
+
+                            // Close scanner shortcut
+                            IconButton(
+                                onClick = { isScannerActive = false },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            }
+                        }
                     }
                 }
             }
         } else {
-            // MAIN UI
+            // MAIN DIET / MEAL SCREEN
             Scaffold(
                 containerColor = Color.Transparent,
                 bottomBar = { BottomNavBar(navController = navController) }
@@ -246,61 +327,273 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                         .padding(padding)
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(20.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
-                    val todayMeals by viewModel.todayMeals.collectAsState()
-                    val totalCalories = todayMeals.sumOf { it.calories.toDouble() }.toInt()
+                    val consumedCalories = todayMeals.sumOf { it.calories.toDouble() }.roundToInt()
+                    val consumedProtein = todayMeals.sumOf { it.proteinG.toDouble() }.roundToInt()
+                    val consumedCarbs = todayMeals.sumOf { it.carbsG.toDouble() }.roundToInt()
+                    val consumedFats = todayMeals.sumOf { it.fatG.toDouble() }.roundToInt()
 
-                    MainHeader(onScanClick = { 
-                        if (cameraPermissionState.status.isGranted) {
-                            isScannerActive = true 
-                        } else {
-                            cameraPermissionState.launchPermissionRequest()
+                    val targetCalories = (personalizedPlan?.targetCalories ?: userProfile?.dailyCalorieTarget ?: 2400.0).roundToInt()
+                    val targetProtein = (personalizedPlan?.proteinTargetG ?: userProfile?.proteinTarget ?: 150.0).roundToInt()
+                    val targetCarbs = (personalizedPlan?.carbsTargetG ?: userProfile?.carbsTarget ?: 250.0).roundToInt()
+                    val targetFats = (personalizedPlan?.fatsTargetG ?: userProfile?.fatsTarget ?: 70.0).roundToInt()
+                    val waterTarget = personalizedPlan?.waterTargetLiters ?: 3.0
+
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Nutrition & Diet", style = Typography.displayLarge, color = InkBlack)
+                            Text("Certified IFCT 2017 & AI Meal Planner", style = Typography.bodySmall, color = TextMuted)
                         }
-                    })
-                    
+
+                        // Camera Scan Button
+                        IconButton(
+                            onClick = {
+                                if (cameraPermissionState.status.isGranted) {
+                                    isScannerActive = true
+                                } else {
+                                    cameraPermissionState.launchPermissionRequest()
+                                }
+                            },
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(SunsetOrange)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = "Scan Food", tint = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // DAILY CALORIE & MACRO TARGET PROGRESS HUB
+                    DailyNutritionHubCard(
+                        targetCalories = targetCalories,
+                        consumedCalories = consumedCalories,
+                        consumedProtein = consumedProtein,
+                        targetProtein = targetProtein,
+                        consumedCarbs = consumedCarbs,
+                        targetCarbs = targetCarbs,
+                        consumedFats = consumedFats,
+                        targetFats = targetFats,
+                        waterTargetLiters = waterTarget
+                    )
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    DateSelector()
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    BaseCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Total Intake", style = Typography.bodyMedium, color = TextMuted)
-                                Text("$totalCalories kcal", style = Typography.displayMedium, color = InkBlack)
+
+                    // TWO TABS: [ Personalized Diet Plan 🥗 ]  |  [ Logged Today 🍽️ ]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceAlt)
+                            .padding(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedTab == 0) SunsetOrange else Color.Transparent)
+                                .clickable { selectedTab = 0 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Personalized Diet 🥗",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (selectedTab == 0) Color.White else InkBlack
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedTab == 1) SunsetOrange else Color.Transparent)
+                                .clickable { selectedTab = 1 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Logged Today (${todayMeals.size}) 🍽️",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (selectedTab == 1) Color.White else InkBlack
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // TAB 0: PERSONALIZED DIET PLAN BY NUTRITIONIST
+                    if (selectedTab == 0) {
+                        val plan = personalizedPlan
+                        if (plan != null) {
+                            // Plan Title & Summary Card
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardSurface),
+                                border = BorderStroke(1.dp, StrokeSoft)
+                            ) {
+                                Column(modifier = Modifier.padding(18.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(plan.title, style = Typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold), color = InkBlack)
+                                            Text(plan.dietSummary, style = Typography.bodySmall, color = TextMuted)
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.regenerateMealPlan()
+                                                Toast.makeText(context, "Regenerating your diet plan...", Toast.LENGTH_SHORT).show()
+                                            }
+                                        ) {
+                                            Icon(Icons.Default.Refresh, contentDescription = "Regenerate Plan", tint = SunsetOrange)
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(10.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(OrangeTint)
+                                            .padding(10.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("💡", fontSize = 16.sp)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(plan.nutritionistNotes, fontSize = 12.sp, color = InkBlack, fontWeight = FontWeight.Medium)
+                                        }
+                                    }
+                                }
                             }
+
+                            Spacer(Modifier.height(16.dp))
+                            Text("Scheduled Daily Meals", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InkBlack)
+                            Spacer(Modifier.height(12.dp))
+
+                            // Planned Meal Items
+                            plan.meals.forEach { item ->
+                                PlannedMealCard(
+                                    item = item,
+                                    onLogMeal = {
+                                        viewModel.logPlannedMeal(item)
+                                        Toast.makeText(context, "Logged ${item.mealType} to today's intake!", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        } else {
+                            // Empty Diet Plan Fallback
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardSurface),
+                                border = BorderStroke(1.dp, StrokeSoft)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("🥗", fontSize = 42.sp)
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Generate Personalized Diet Plan", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InkBlack)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Get a certified nutritionist meal plan tailored to your biometrics, diet preference, and fitness goal.", textAlign = TextAlign.Center, color = TextMuted, fontSize = 13.sp)
+                                    Spacer(Modifier.height(18.dp))
+                                    PrimaryButton(
+                                        text = "Generate Nutrition Plan ⚡",
+                                        onClick = {
+                                            viewModel.regenerateMealPlan()
+                                            Toast.makeText(context, "Crafting your diet plan...", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // TAB 1: LOGGED MEALS TODAY
+                    if (selectedTab == 1) {
+                        // Quick Action Buttons
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
-                                onClick = { showFoodLibrary = true },
+                                onClick = {
+                                    if (cameraPermissionState.status.isGranted) {
+                                        isScannerActive = true
+                                    } else {
+                                        cameraPermissionState.launchPermissionRequest()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = SunsetOrange, contentColor = Color.White),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Add Manually")
+                                Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Scan Food 📸", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+
+                            Button(
+                                onClick = { showFoodLibrary = true },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SurfaceAlt, contentColor = InkBlack),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, StrokeSoft)
+                            ) {
+                                Icon(Icons.Default.Search, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Search Food 🔍", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        if (todayMeals.isEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardSurface),
+                                border = BorderStroke(1.dp, StrokeSoft)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("🍽️", fontSize = 40.sp)
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("No meals logged yet today", style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InkBlack)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text("Snap a picture of your meal or log directly from your Personalized Diet tab.", color = TextMuted, textAlign = TextAlign.Center, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            todayMeals.forEach { meal ->
+                                MealCard(meal)
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Text("Today's Meals", style = Typography.titleLarge, color = InkBlack)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    if (todayMeals.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                            Text("No meals logged yet", style = Typography.bodyLarge, color = TextMuted)
-                        }
-                    } else {
-                        todayMeals.forEach { meal ->
-                            MealCard(meal)
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
+
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }
 
-        // Scan Result Overlay
-        val scanAlternatives by viewModel.scanAlternatives.collectAsState()
+        // COMPREHENSIVE QUANTITY SELECTION MODAL POPUP
         AnimatedVisibility(
             visible = scannedResult != null,
             modifier = Modifier
@@ -311,13 +604,13 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
             exit = slideOutVertically { it } + fadeOut()
         ) {
             scannedResult?.let { food ->
-                ResultPopup(
+                ComprehensiveQuantityPopup(
                     food = food,
                     alternatives = scanAlternatives,
                     onSelectAlternative = { altName -> viewModel.selectAlternativeFood(altName) },
-                    onAdd = { calculatedMeal ->
-                        viewModel.saveMealToRoom(calculatedMeal)
-                        viewModel.clearResult()
+                    onAdd = { scaledMeal, qtyGrams, mealType ->
+                        viewModel.logScannedFood(scaledMeal, qtyGrams, mealType)
+                        Toast.makeText(context, "Added ${scaledMeal.name} (${qtyGrams.toInt()}g) to today's log!", Toast.LENGTH_SHORT).show()
                         isScannerActive = false
                     },
                     onCancel = { viewModel.clearResult() }
@@ -325,6 +618,7 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
             }
         }
 
+        // Food Library Modal Bottom Sheet
         if (showFoodLibrary) {
             ModalBottomSheet(
                 onDismissRequest = { showFoodLibrary = false },
@@ -337,23 +631,341 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
     }
 }
 
+/**
+ * CameraX Capture View that connects to ImageCapture and captures photos on shutter click.
+ */
 @Composable
-fun ResultPopup(
+fun CameraCaptureOverlay(
+    isFlashEnabled: Boolean,
+    triggerCapture: Boolean,
+    onPhotoCaptured: (Bitmap) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val executor = remember { ContextCompat.getMainExecutor(context) }
+
+    var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
+    val imageCapture = remember {
+        ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .build()
+    }
+
+    LaunchedEffect(camera, isFlashEnabled) {
+        camera?.cameraControl?.enableTorch(isFlashEnabled)
+    }
+
+    LaunchedEffect(triggerCapture) {
+        if (triggerCapture) {
+            imageCapture.takePicture(
+                executor,
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                        val bitmap = imageProxy.toRotatedBitmap()
+                        imageProxy.close()
+                        if (bitmap != null) {
+                            onPhotoCaptured(bitmap)
+                        }
+                    }
+
+                    override fun onError(exception: ImageCaptureException) {
+                        Log.e("CAMERA", "Photo capture error: ${exception.message}", exception)
+                    }
+                }
+            )
+        }
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx).apply {
+                scaleType = PreviewView.ScaleType.FILL_CENTER
+                layoutParams = android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                try {
+                    cameraProvider.unbindAll()
+                    camera = cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        imageCapture
+                    )
+                    if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                        camera?.cameraControl?.enableTorch(isFlashEnabled)
+                    }
+                } catch (e: Exception) {
+                    Log.e("CAMERA", "Binding failed: ${e.message}")
+                }
+            }, executor)
+            previewView
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+/**
+ * Daily Nutrition Progress Card showing Calories, Macros, and Water Target
+ */
+@Composable
+fun DailyNutritionHubCard(
+    targetCalories: Int,
+    consumedCalories: Int,
+    consumedProtein: Int,
+    targetProtein: Int,
+    consumedCarbs: Int,
+    targetCarbs: Int,
+    consumedFats: Int,
+    targetFats: Int,
+    waterTargetLiters: Double
+) {
+    val remainingCalories = (targetCalories - consumedCalories).coerceAtLeast(0)
+    val calProgress = (consumedCalories.toFloat() / targetCalories.toFloat()).coerceIn(0f, 1f)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        border = BorderStroke(1.dp, StrokeSoft),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Main Calorie Counter Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Daily Calorie Budget", style = Typography.bodySmall, color = TextMuted)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("$consumedCalories", style = Typography.displayLarge.copy(fontWeight = FontWeight.ExtraBold), color = SunsetOrange)
+                        Text(" / $targetCalories kcal", style = Typography.titleMedium, color = TextMuted, modifier = Modifier.padding(bottom = 4.dp))
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceAlt)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$remainingCalories", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = InkBlack)
+                        Text("kcal left", fontSize = 10.sp, color = TextMuted)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Main Calorie Progress Bar
+            LinearProgressIndicator(
+                progress = { calProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = SunsetOrange,
+                trackColor = StrokeSoft
+            )
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = StrokeSoft)
+            Spacer(Modifier.height(14.dp))
+
+            // Macro Targets Breakdown
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MacroTargetPill(label = "Protein", consumed = consumedProtein, target = targetProtein, unit = "g", color = SunsetOrange, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                MacroTargetPill(label = "Carbs", consumed = consumedCarbs, target = targetCarbs, unit = "g", color = Color(0xFF00B0FF), modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                MacroTargetPill(label = "Fats", consumed = consumedFats, target = targetFats, unit = "g", color = Color(0xFFFFB300), modifier = Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Water Target Chip
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFE1F5FE))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("💧", fontSize = 14.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Hydration Goal: ${waterTargetLiters}L pure water throughout the day",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0277BD)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MacroTargetPill(
+    label: String,
+    consumed: Int,
+    target: Int,
+    unit: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val progress = if (target > 0) (consumed.toFloat() / target.toFloat()).coerceIn(0f, 1f) else 0f
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceAlt)
+            .padding(10.dp)
+    ) {
+        Text(label, fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("$consumed / $target$unit", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = InkBlack)
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = color,
+            trackColor = StrokeSoft
+        )
+    }
+}
+
+/**
+ * Planned Meal Item Card in the Personalized Nutritionist Diet Plan
+ */
+@Composable
+fun PlannedMealCard(
+    item: PlannedMealItem,
+    onLogMeal: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        border = BorderStroke(1.dp, StrokeSoft),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row: Badge & Type
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(OrangeTint)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = item.mealType.uppercase(),
+                        color = SunsetOrange,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                Text(
+                    text = "${item.calories.roundToInt()} kcal",
+                    style = Typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = SunsetOrange
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Text(item.title, style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InkBlack)
+            Spacer(Modifier.height(4.dp))
+            Text(item.foodDescription, style = Typography.bodyMedium, color = TextMuted)
+
+            Spacer(Modifier.height(10.dp))
+
+            // Macro details row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceAlt)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Portion: ${item.portionGrams.toInt()}g", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = InkBlack)
+                Text("P: ${item.proteinG}g", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SunsetOrange)
+                Text("C: ${item.carbsG}g", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00B0FF))
+                Text("F: ${item.fatsG}g", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFB300))
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Nutritionist Pro Tip Callout
+            Row(verticalAlignment = Alignment.Top) {
+                Text("💡", fontSize = 12.sp)
+                Spacer(Modifier.width(6.dp))
+                Text(item.nutritionistTip, fontSize = 11.sp, color = TextMuted, lineHeight = 16.sp)
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Quick One-Tap Log Button
+            Button(
+                onClick = onLogMeal,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SunsetOrange, contentColor = Color.White),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Log This Meal to Today's Intake", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/**
+ * Comprehensive Quantity Selection Bottom Sheet with Grams, Servings, Macro scaling, and Add button
+ */
+@Composable
+fun ComprehensiveQuantityPopup(
     food: MealEntity,
     alternatives: List<String> = emptyList(),
     onSelectAlternative: (String) -> Unit = {},
-    onAdd: (MealEntity) -> Unit,
+    onAdd: (MealEntity, Float, String) -> Unit,
     onCancel: () -> Unit
 ) {
-    var quantityGrams by remember { mutableStateOf(100f) }
-    var quantityText by remember { mutableStateOf("100") }
+    var quantityGrams by remember { mutableFloatStateOf(150f) }
+    var quantityText by remember { mutableStateOf("150") }
     var selectedMealType by remember { mutableStateOf(food.mealType.lowercase()) }
 
     val multiplier = (quantityGrams / 100f).coerceAtLeast(0.01f)
-    val calculatedCalories = (food.calories * multiplier).toInt()
-    val calculatedProtein = food.proteinG * multiplier
-    val calculatedCarbs = food.carbsG * multiplier
-    val calculatedFat = food.fatG * multiplier
+    val calculatedCalories = (food.calories * multiplier).roundToInt()
+    val calculatedProtein = ((food.proteinG * multiplier) * 10).roundToInt() / 10f
+    val calculatedCarbs = ((food.carbsG * multiplier) * 10).roundToInt() / 10f
+    val calculatedFat = ((food.fatG * multiplier) * 10).roundToInt() / 10f
 
     val foodIcon = when {
         food.name.contains("egg", ignoreCase = true) -> "🍳"
@@ -373,17 +985,18 @@ fun ResultPopup(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = CardSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        border = BorderStroke(1.dp, StrokeSoft)
     ) {
         Column(
             modifier = Modifier
                 .padding(20.dp)
                 .fillMaxWidth()
         ) {
-            // Header: Food Icon, Name, Base Info, and Close Button
+            // Food Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -407,7 +1020,7 @@ fun ResultPopup(
                         color = InkBlack
                     )
                     Text(
-                        text = "Base: ${food.calories.toInt()} kcal / 100g",
+                        text = "Standard Ref: ${food.calories.toInt()} kcal / 100g",
                         style = Typography.bodySmall,
                         color = TextMuted
                     )
@@ -423,11 +1036,11 @@ fun ResultPopup(
                 }
             }
 
-            // Top Alternative Suggestions
+            // Top Alternative Matches
             if (alternatives.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "MATCH SUGGESTIONS",
+                    text = "SWITCH MATCH",
                     style = Typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
                     color = TextMuted
                 )
@@ -450,46 +1063,35 @@ fun ResultPopup(
                         ) {
                             Text(
                                 text = alt,
+                                fontSize = 11.sp,
+                                maxLines = 1,
                                 color = if (isSelected) SunsetOrange else InkBlack,
-                                style = Typography.labelSmall.copy(fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
-                                maxLines = 1
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = StrokeSoft)
             Spacer(Modifier.height(14.dp))
 
-            // Quantity / Portion Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "PORTION / QUANTITY",
-                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                    color = TextMuted
-                )
-                Text(
-                    text = "${quantityGrams.toInt()} grams",
-                    style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = SunsetOrange
-                )
-            }
+            // Comprehensive Quantity Selector Header
+            Text(
+                text = "PORTION & QUANTITY",
+                style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                color = TextMuted
+            )
+            Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(10.dp))
-
-            // Quantity Stepper and Input
+            // Step adjustment and Direct Number Input
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Minus 25g button
+                // Minus 25g
                 IconButton(
                     onClick = {
                         val newQty = (quantityGrams - 25f).coerceAtLeast(10f)
@@ -497,15 +1099,15 @@ fun ResultPopup(
                         quantityText = newQty.toInt().toString()
                     },
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(SurfaceAlt)
                         .border(1.dp, StrokeSoft, RoundedCornerShape(12.dp))
                 ) {
-                    Text("-25g", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = InkBlack)
+                    Text("-25g", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = InkBlack)
                 }
 
-                // Quantity Editable TextField
+                // Number textfield
                 OutlinedTextField(
                     value = quantityText,
                     onValueChange = { input ->
@@ -518,7 +1120,7 @@ fun ResultPopup(
                     },
                     modifier = Modifier
                         .width(130.dp)
-                        .height(52.dp),
+                        .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = CardSurface,
@@ -534,7 +1136,7 @@ fun ResultPopup(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
-                // Plus 25g button
+                // Plus 25g
                 IconButton(
                     onClick = {
                         val newQty = (quantityGrams + 25f).coerceAtMost(2000f)
@@ -542,23 +1144,23 @@ fun ResultPopup(
                         quantityText = newQty.toInt().toString()
                     },
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(SurfaceAlt)
                         .border(1.dp, StrokeSoft, RoundedCornerShape(12.dp))
                 ) {
-                    Text("+25g", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = InkBlack)
+                    Text("+25g", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = InkBlack)
                 }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // Quick Preset Chips (50g, 100g, 150g, 200g, 250g)
+            // Quick Preset Gram Chips
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                listOf(50f, 100f, 150f, 200f, 250f).forEach { preset ->
+                listOf(50f, 100f, 150f, 200f, 250f, 300f).forEach { preset ->
                     val isSelected = (quantityGrams == preset)
                     Box(
                         modifier = Modifier
@@ -582,9 +1184,46 @@ fun ResultPopup(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Live Calculated Macro Badges
+            // Common Household Serving Presets
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    Pair("🥣 Bowl", 150f),
+                    Pair("🍽️ Plate", 300f),
+                    Pair("🫓 Roti/Pc", 50f),
+                    Pair("🥛 Cup", 200f)
+                ).forEach { (label, grams) ->
+                    val isSel = (quantityGrams == grams)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSel) OrangeTint else CardSurface)
+                            .border(1.dp, if (isSel) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
+                            .clickable {
+                                quantityGrams = grams
+                                quantityText = grams.toInt().toString()
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSel) SunsetOrange else InkBlack
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Dynamic Scaled Macros Box
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -596,14 +1235,14 @@ fun ResultPopup(
                 MacroBadge(label = "Calories", value = "$calculatedCalories", unit = "kcal", highlight = true, modifier = Modifier.weight(1.2f))
                 MacroBadge(label = "Protein", value = String.format("%.1f", calculatedProtein), unit = "g", modifier = Modifier.weight(1f))
                 MacroBadge(label = "Carbs", value = String.format("%.1f", calculatedCarbs), unit = "g", modifier = Modifier.weight(1f))
-                MacroBadge(label = "Fat", value = String.format("%.1f", calculatedFat), unit = "g", modifier = Modifier.weight(1f))
+                MacroBadge(label = "Fats", value = String.format("%.1f", calculatedFat), unit = "g", modifier = Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(14.dp))
 
-            // Meal Type Selection Chips
+            // Meal Type Chips
             Text(
-                text = "LOG AS",
+                text = "LOG UNDER MEAL",
                 style = Typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = TextMuted
             )
@@ -612,21 +1251,26 @@ fun ResultPopup(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf("breakfast", "lunch", "dinner", "snack").forEach { type ->
-                    val isTypeSelected = (selectedMealType == type)
+                listOf(
+                    Pair("breakfast", "🌅 Breakfast"),
+                    Pair("lunch", "☀️ Lunch"),
+                    Pair("snack", "🍎 Snack"),
+                    Pair("dinner", "🌙 Dinner")
+                ).forEach { (key, display) ->
+                    val isTypeSelected = (selectedMealType == key)
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isTypeSelected) OrangeTint else CardSurface)
+                            .background(if (isTypeSelected) SunsetOrange else SurfaceAlt)
                             .border(1.dp, if (isTypeSelected) SunsetOrange else StrokeSoft, RoundedCornerShape(8.dp))
-                            .clickable { selectedMealType = type }
+                            .clickable { selectedMealType = key }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = type.replaceFirstChar { it.uppercase() },
-                            color = if (isTypeSelected) SunsetOrange else InkBlack,
+                            text = display,
+                            color = if (isTypeSelected) Color.White else InkBlack,
                             style = Typography.labelSmall.copy(fontWeight = if (isTypeSelected) FontWeight.Bold else FontWeight.Medium)
                         )
                     }
@@ -635,19 +1279,11 @@ fun ResultPopup(
 
             Spacer(Modifier.height(18.dp))
 
-            // Add / Save Button
+            // ADD TO LOG BUTTON
             PrimaryButton(
-                text = "Log Meal • $calculatedCalories kcal",
+                text = "Add to Meal Log • $calculatedCalories kcal",
                 onClick = {
-                    val finalMeal = food.copy(
-                        name = food.name,
-                        calories = calculatedCalories.toFloat(),
-                        proteinG = calculatedProtein,
-                        carbsG = calculatedCarbs,
-                        fatG = calculatedFat,
-                        mealType = selectedMealType
-                    )
-                    onAdd(finalMeal)
+                    onAdd(food, quantityGrams, selectedMealType)
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -690,19 +1326,6 @@ fun MacroBadge(
 }
 
 @Composable
-fun MainHeader(onScanClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().statusBarsPadding(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("Nutrition Log", style = Typography.displayLarge, color = InkBlack)
-        IconButton(
-            onClick = onScanClick, 
-            modifier = Modifier.size(50.dp).background(SunsetOrange, CircleShape)
-        ) {
-            Icon(Icons.Default.QrCodeScanner, null, tint = Color.White)
-        }
-    }
-}
-
-@Composable
 fun MealCard(meal: MealEntity) {
     BaseCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -734,63 +1357,25 @@ fun MealCard(meal: MealEntity) {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun DateSelector() {
-    val today = LocalDate.now()
-    val weekDays = remember { (0..6).map { today.plusDays(it.toLong() - today.dayOfWeek.value + 1) } }
-    var selectedDate by remember { mutableStateOf(today) }
-
-    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-        weekDays.forEach { date ->
-            val isSelected = date == selectedDate
-            Box(
-                modifier = Modifier
-                    .width(48.dp)
-                    .height(70.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isSelected) SunsetOrange else CardSurface)
-                    .clickable { selectedDate = date },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = date.dayOfWeek.name.take(3),
-                        color = if (isSelected) Color.White else TextMuted,
-                        style = Typography.labelSmall
-                    )
-                    Text(
-                        text = date.dayOfMonth.toString(),
-                        color = if (isSelected) Color.White else InkBlack,
-                        style = Typography.titleLarge
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
     var query by remember { mutableStateOf("") }
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
-    var showCustomForm by remember { mutableStateOf(false) }
-    var selectedResultForLogging by remember { mutableStateOf<com.example.gymfitness.data.remote.dto.NutrientDto?>(null) }
 
-    // Custom Form states
+    var showCustomForm by remember { mutableStateOf(false) }
     var customName by remember { mutableStateOf("") }
     var customCalories by remember { mutableStateOf("") }
     var customProtein by remember { mutableStateOf("") }
     var customCarbs by remember { mutableStateOf("") }
     var customFats by remember { mutableStateOf("") }
-    var customMealType by remember { mutableStateOf("breakfast") }
+    var customMealType by remember { mutableStateOf("lunch") }
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 16.dp)
             .fillMaxWidth()
             .fillMaxHeight(0.85f)
+            .padding(20.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
@@ -798,7 +1383,7 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Log Meal", style = Typography.displayMedium, color = InkBlack)
+            Text("Search & Add Food", style = Typography.displayMedium, color = InkBlack)
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, null, tint = InkBlack)
             }
@@ -809,7 +1394,7 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
         PrimaryInputField(
             value = query,
             onValueChange = { query = it; viewModel.searchFood(it) },
-            label = "Search food..."
+            label = "Search Food (e.g. Chicken, Paneer, Rice, Dal)..."
         )
 
         Spacer(Modifier.height(20.dp))
@@ -824,23 +1409,25 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
                     SearchResultItem(result, viewModel, onDismiss)
                 }
             } else if (query.isNotBlank() && searchResults.isEmpty()) {
-                Text("Food not found. Add custom food.", color = TextMuted)
+                Text("Food not found. Add custom food to your shared database.", color = TextMuted)
                 Spacer(Modifier.height(16.dp))
                 PrimaryButton(text = "Add Custom Food", onClick = { customName = query; showCustomForm = true })
             } else {
-                Text("Popular Foods", style = Typography.titleMedium, color = InkBlack)
+                Text("Popular Verified Foods", style = Typography.titleMedium, color = InkBlack)
                 Spacer(Modifier.height(8.dp))
                 val popular = listOf(
-                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Egg", 155.0, 13.0, 1.1, 11.0),
-                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Chicken", 165.0, 31.0, 0.0, 3.6),
-                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Broccoli", 34.0, 2.8, 7.0, 0.4)
+                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Egg (Boiled)", 155.0, 13.0, 1.1, 11.0),
+                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Chicken Breast", 165.0, 31.0, 0.0, 3.6),
+                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Paneer", 265.0, 18.3, 1.2, 20.8),
+                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Dal Tadka", 120.0, 6.0, 16.0, 3.5),
+                    com.example.gymfitness.data.remote.dto.NutrientDto(null, "Brown Rice", 111.0, 2.6, 23.0, 0.9)
                 )
                 popular.forEach { result ->
                     SearchResultItem(result, viewModel, onDismiss)
                 }
                 Spacer(Modifier.height(16.dp))
                 TextButton(onClick = { showCustomForm = true }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Or add custom food", color = SunsetOrange)
+                    Text("Or add custom food profile", color = SunsetOrange)
                 }
             }
         }
@@ -849,7 +1436,7 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
             Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 HorizontalDivider(color = StrokeSoft)
                 Spacer(Modifier.height(16.dp))
-                Text("Add Custom Food", style = Typography.titleLarge, color = InkBlack)
+                Text("Add Custom Food Item", style = Typography.titleLarge, color = InkBlack)
                 Spacer(Modifier.height(16.dp))
                 PrimaryInputField(customName, { customName = it }, "Food Name")
                 Spacer(Modifier.height(8.dp))
@@ -887,7 +1474,7 @@ fun FoodLibraryList(viewModel: MealViewModel, onDismiss: () -> Unit) {
 @Composable
 fun SearchResultItem(result: com.example.gymfitness.data.remote.dto.NutrientDto, viewModel: MealViewModel, onDismiss: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var quantityGrams by remember { mutableStateOf(100f) }
+    var quantityGrams by remember { mutableFloatStateOf(100f) }
     val multiplier = (quantityGrams / 100f).coerceAtLeast(0.01f)
     val scaledCalories = (result.calories * multiplier).toInt()
     val scaledProtein = result.proteinG * multiplier
@@ -947,87 +1534,4 @@ fun SearchResultItem(result: com.example.gymfitness.data.remote.dto.NutrientDto,
             }
         }
     }
-}
-
-@Composable
-fun CameraPreviewOverlay(
-    isFlashEnabled: Boolean,
-    isAnalyzingEnabled: Boolean,
-    onFrameCaptured: (Bitmap) -> Unit,
-    onBarcodeDetected: (String) -> Unit
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val executor = remember { ContextCompat.getMainExecutor(context) }
-    var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
-
-    val backgroundExecutor = remember { java.util.concurrent.Executors.newSingleThreadExecutor() }
-    val currentIsAnalyzingEnabled by rememberUpdatedState(isAnalyzingEnabled)
-
-    DisposableEffect(Unit) {
-        onDispose {
-            backgroundExecutor.shutdown()
-        }
-    }
-
-    LaunchedEffect(camera, isFlashEnabled) {
-        camera?.cameraControl?.enableTorch(isFlashEnabled)
-    }
-
-    AndroidView(
-        factory = { ctx ->
-            val previewView = PreviewView(ctx).apply {
-                scaleType = PreviewView.ScaleType.FILL_CENTER
-                layoutParams = android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-            cameraProviderFuture.addListener({
-                var lastAnalysisTime = 0L
-                val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-                val imageAnalysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
-                    it.setAnalyzer(backgroundExecutor) { imageProxy ->
-                        val currentTime = System.currentTimeMillis()
-                        val shouldAnalyze = currentIsAnalyzingEnabled && (currentTime - lastAnalysisTime >= 2000)
-
-                        if (!shouldAnalyze) {
-                            imageProxy.close()
-                            return@setAnalyzer
-                        }
-
-                        lastAnalysisTime = currentTime
-
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null) {
-                            val image = com.google.mlkit.vision.common.InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                            val scanner = com.google.mlkit.vision.barcode.BarcodeScanning.getClient()
-                            scanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    barcodes.forEach { b -> b.rawValue?.let { v -> onBarcodeDetected(v) } }
-                                }
-                                .addOnCompleteListener {
-                                    val bitmap = imageProxy.toRotatedBitmap()
-                                    if (bitmap != null) onFrameCaptured(bitmap)
-                                    imageProxy.close()
-                                }
-                        } else {
-                            imageProxy.close()
-                        }
-                    }
-                }
-                try {
-                    cameraProvider.unbindAll()
-                    camera = cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
-                    if (camera?.cameraInfo?.hasFlashUnit() == true) {
-                        camera?.cameraControl?.enableTorch(isFlashEnabled)
-                    }
-                } catch (e: Exception) {}
-            }, executor)
-            previewView
-        },
-        modifier = Modifier.fillMaxSize()
-    )
 }

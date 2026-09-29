@@ -79,3 +79,28 @@ data class WeightEntry(
     val weightKg: Float,
     val timestampMs: Long = System.currentTimeMillis()
 )
+
+data class PlannedMealItem(
+    val mealType: String,
+    val title: String,
+    val foodDescription: String,
+    val portionGrams: Float,
+    val calories: Double,
+    val proteinG: Double,
+    val carbsG: Double,
+    val fatsG: Double,
+    val nutritionistTip: String
+)
+
+data class PersonalizedMealPlan(
+    val title: String,
+    val targetCalories: Double,
+    val proteinTargetG: Double,
+    val carbsTargetG: Double,
+    val fatsTargetG: Double,
+    val waterTargetLiters: Double,
+    val dietSummary: String,
+    val nutritionistNotes: String,
+    val meals: List<PlannedMealItem>
+)
+

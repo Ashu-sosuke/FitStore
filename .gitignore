@@ -28,7 +28,9 @@ captures/
 # AI Data & Weights
 food-analyser/data/
 food-analyser/venv/
-weights/
+!Backend_Python/food-analyser/weights/food_mobilenetv2.pth
+!Backend_Python/food-analyser/weights/class_mapping.json
+!Backend_Python/food-analyser/weights/classification_report.txt
 
 # OS / IDE
 .DS_Store

@@ -6,4 +6,6 @@ venv/
 *.egg-info/
 dist/
 build/
-weights/
+!weights/food_mobilenetv2.pth
+!weights/class_mapping.json
+!weights/classification_report.txt

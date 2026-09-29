@@ -1,0 +1,25 @@
+CLASSIFICATION REPORT
+============================================================
+              precision    recall  f1-score   support
+
+     Avocado      1.000     0.875     0.933        16
+    Broccoli      1.000     0.938     0.968        16
+     Chicken      0.733     0.688     0.710        16
+         Egg      0.737     0.875     0.800        16
+        Milk      0.800     1.000     0.889        16
+      Salmon      0.769     0.625     0.690        16
+
+    accuracy                          0.833        96
+   macro avg      0.840     0.833     0.832        96
+weighted avg      0.840     0.833     0.832        96
+
+
+CONFUSION MATRIX
+============================================================
+Classes: ['Avocado', 'Broccoli', 'Chicken', 'Egg', 'Milk', 'Salmon']
+[[14  0  1  1  0  0]
+ [ 0 15  0  0  0  1]
+ [ 0  0 11  2  1  2]
+ [ 0  0  1 14  1  0]
+ [ 0  0  0  0 16  0]
+ [ 0  0  2  2  2 10]]

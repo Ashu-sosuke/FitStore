@@ -73,6 +73,56 @@ SEARCH_QUERIES: dict[str, list[str]] = {
         "raw salmon sushi",
         "baked salmon plate",
     ],
+    "Banana": [
+        "fresh ripe yellow banana",
+        "banana fruit on table",
+        "peeled banana fruit",
+    ],
+    "Apple": [
+        "fresh red apple fruit",
+        "sliced red apple plate",
+        "whole shiny red apple",
+    ],
+    "Bread": [
+        "sliced white bread loaf",
+        "toasted brown bread slice",
+        "fresh bakery bread slice",
+    ],
+    "Orange": [
+        "fresh juicy orange fruit",
+        "sliced orange citrus",
+        "peeled orange fruit",
+    ],
+    "Potato": [
+        "raw potato vegetable",
+        "boiled potato food",
+        "cut potato slices raw",
+    ],
+    "Rice": [
+        "cooked white rice bowl",
+        "steamed plain rice plate",
+        "boiled basmati rice",
+    ],
+    "Pasta": [
+        "cooked pasta dish plate",
+        "penne pasta tomato food",
+        "spaghetti pasta cooked",
+    ],
+    "Pizza": [
+        "slice of cheese pizza",
+        "pepperoni pizza plate",
+        "baked hot pizza slice",
+    ],
+    "Burger": [
+        "hamburger on bun plate",
+        "beef cheeseburger food",
+        "fresh burger sandwich",
+    ],
+    "Salad": [
+        "fresh green garden salad",
+        "vegetable salad bowl",
+        "mixed fresh salad plate",
+    ],
 }
 
 TRAIN_SPLIT = 0.80  # 80% train, 20% validation

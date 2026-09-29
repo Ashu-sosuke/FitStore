@@ -38,6 +38,7 @@ class UserViewModelTest {
     private lateinit var repository: UserRepository
     private lateinit var workoutRepository: WorkoutRepository
     private lateinit var generateWorkoutPlanUseCase: GenerateWorkoutPlanUseCase
+    private lateinit var generateNutritionPlanUseCase: com.example.gymfitness.domain.usecase.meal.GenerateNutritionPlanUseCase
     private lateinit var db: AppDatabase
     private lateinit var tokenManager: TokenManager
     private lateinit var context: Context
@@ -64,6 +65,7 @@ class UserViewModelTest {
         repository = mockk(relaxed = true)
         workoutRepository = mockk(relaxed = true)
         generateWorkoutPlanUseCase = mockk(relaxed = true)
+        generateNutritionPlanUseCase = mockk(relaxed = true)
         db = mockk(relaxed = true)
         tokenManager = mockk(relaxed = true)
         context = mockk(relaxed = true)
@@ -76,6 +78,7 @@ class UserViewModelTest {
             repository = repository,
             workoutRepository = workoutRepository,
             generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
+            generateNutritionPlanUseCase = generateNutritionPlanUseCase,
             db = db,
             tokenManager = tokenManager,
             context = context
@@ -104,6 +107,7 @@ class UserViewModelTest {
             repository = repository,
             workoutRepository = workoutRepository,
             generateWorkoutPlanUseCase = generateWorkoutPlanUseCase,
+            generateNutritionPlanUseCase = generateNutritionPlanUseCase,
             db = db,
             tokenManager = tokenManager,
             context = context

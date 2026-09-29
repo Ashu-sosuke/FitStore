@@ -31,6 +31,28 @@ DISHES_JSON_PATH = DATA_DIR / "dishes.json"
 KJ_TO_KCAL_FACTOR = 4.184
 FUZZY_MATCH_THRESHOLD = 75.0
 
+# Standard nutrient reference per 100g for common dataset foods
+STANDARD_FALLBACK_FOODS: Dict[str, Dict[str, float]] = {
+    "Avocado": {"calories": 160.0, "protein_g": 2.0, "carbs_g": 8.5, "fats_g": 14.7, "fiber_g": 6.7},
+    "Broccoli": {"calories": 34.0, "protein_g": 2.8, "carbs_g": 6.6, "fats_g": 0.4, "fiber_g": 2.6},
+    "Chicken": {"calories": 165.0, "protein_g": 31.0, "carbs_g": 0.0, "fats_g": 3.6, "fiber_g": 0.0},
+    "Egg": {"calories": 143.0, "protein_g": 12.6, "carbs_g": 0.7, "fats_g": 9.5, "fiber_g": 0.0},
+    "Milk": {"calories": 61.0, "protein_g": 3.2, "carbs_g": 4.8, "fats_g": 3.3, "fiber_g": 0.0},
+    "Salmon": {"calories": 208.0, "protein_g": 20.4, "carbs_g": 0.0, "fats_g": 13.0, "fiber_g": 0.0},
+    "Banana": {"calories": 89.0, "protein_g": 1.1, "carbs_g": 22.8, "fats_g": 0.3, "fiber_g": 2.6},
+    "Apple": {"calories": 52.0, "protein_g": 0.3, "carbs_g": 13.8, "fats_g": 0.2, "fiber_g": 2.4},
+    "Bread": {"calories": 265.0, "protein_g": 9.0, "carbs_g": 49.0, "fats_g": 3.2, "fiber_g": 2.7},
+    "Orange": {"calories": 47.0, "protein_g": 0.9, "carbs_g": 11.8, "fats_g": 0.1, "fiber_g": 2.4},
+    "Potato": {"calories": 77.0, "protein_g": 2.0, "carbs_g": 17.0, "fats_g": 0.1, "fiber_g": 2.2},
+    "Rice": {"calories": 130.0, "protein_g": 2.7, "carbs_g": 28.2, "fats_g": 0.3, "fiber_g": 0.4},
+    "Peanut Butter": {"calories": 588.0, "protein_g": 25.0, "carbs_g": 20.0, "fats_g": 50.0, "fiber_g": 6.0},
+    "Oats": {"calories": 389.0, "protein_g": 16.9, "carbs_g": 66.3, "fats_g": 6.9, "fiber_g": 10.6},
+    "Pasta": {"calories": 131.0, "protein_g": 5.0, "carbs_g": 25.0, "fats_g": 1.1, "fiber_g": 1.8},
+    "Pizza": {"calories": 266.0, "protein_g": 11.0, "carbs_g": 33.0, "fats_g": 10.0, "fiber_g": 2.3},
+    "Burger": {"calories": 250.0, "protein_g": 13.0, "carbs_g": 24.0, "fats_g": 11.0, "fiber_g": 1.5},
+    "Salad": {"calories": 35.0, "protein_g": 1.5, "carbs_g": 6.0, "fats_g": 0.5, "fiber_g": 2.0},
+}
+
 class NutrientMacros(BaseModel):
     protein_g: float = Field(..., ge=0)
     carbs_g: float = Field(..., ge=0)
@@ -348,8 +370,42 @@ class NutritionEngine:
                 notes="Fuzzy matched with IFCT reference database"
             )
 
-        # 5. Not Found
+        # 5. Standard USDA / Dataset Foods Fallback (Avocado, Broccoli, Chicken, Egg, Milk, Salmon, etc.)
+        standard_fallback = self._lookup_standard_fallback(food_query, grams)
+        if standard_fallback:
+            return standard_fallback
+
+        # 6. Not Found
         return self._not_found_result(food_query, grams)
+
+    def _lookup_standard_fallback(self, food_query: str, grams: float) -> Optional[NutritionResult]:
+        query_norm = normalize_text(food_query)
+        # Check standard dictionary
+        for food_name, item_data in STANDARD_FALLBACK_FOODS.items():
+            name_norm = normalize_text(food_name)
+            if name_norm in query_norm or query_norm in name_norm:
+                mult = max(grams, 0.0) / 100.0
+                calories = round(item_data["calories"] * mult, 1)
+                macros = NutrientMacros(
+                    protein_g=round(item_data["protein_g"] * mult, 2),
+                    carbs_g=round(item_data["carbs_g"] * mult, 2),
+                    fats_g=round(item_data["fats_g"] * mult, 2),
+                    fiber_g=round(item_data.get("fiber_g", 0.0) * mult, 2),
+                )
+                return NutritionResult(
+                    success=True,
+                    query=food_query,
+                    matched_name=food_name,
+                    source="USDA_FALLBACK",
+                    confidence="HIGH",
+                    match_score=95.0,
+                    grams=grams,
+                    calories=calories,
+                    macros=macros,
+                    serving_unit=f"{int(grams)}g",
+                    notes=item_data.get("notes", "Dataset & USDA reference standard")
+                )
+        return None
 
     def _fuzzy_search(self, query_norm: str) -> Optional[tuple[FoodItem100g, float]]:
         best_item = None
