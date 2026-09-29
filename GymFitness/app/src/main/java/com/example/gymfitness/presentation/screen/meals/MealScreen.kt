@@ -159,8 +159,8 @@ fun MealScreen(navController: NavController, viewModel: MealViewModel = hiltView
                     }
                 }
 
-                // Camera Cutout Mask & Laser line (drawn during viewfinder and background scan)
-                if (scanError == null || isAnalyzing) {
+                // Camera Cutout Mask & Laser line (drawn during viewfinder and background scan, before result is ready)
+                if (scannedResult == null && (scanError == null || isAnalyzing)) {
                     Canvas(
                         modifier = Modifier
                             .fillMaxSize()
@@ -1140,8 +1140,10 @@ fun ComprehensiveQuantityPopup(
     ) {
         Column(
             modifier = Modifier
-                .padding(20.dp)
                 .fillMaxWidth()
+                .heightIn(max = 600.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
         ) {
             // Food Header
             Row(

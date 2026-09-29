@@ -42,11 +42,10 @@ object NetworkModule {
             val token = tokenManager.getToken()
             
             val requestBuilder = originalRequest.newBuilder()
+            requestBuilder.addHeader("X-User-Id", tokenManager.getUserId())
+            requestBuilder.addHeader("X-API-KEY", BuildConfig.API_KEY)
             if (token != null) {
                 requestBuilder.addHeader("Authorization", "Bearer $token")
-            } else {
-                // Fallback to API Key for initial requests if needed, or just let it fail
-                requestBuilder.addHeader("X-API-KEY", BuildConfig.API_KEY)
             }
             
             chain.proceed(requestBuilder.build())

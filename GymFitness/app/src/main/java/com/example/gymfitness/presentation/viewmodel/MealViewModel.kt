@@ -17,6 +17,8 @@ import com.example.gymfitness.domain.repository.UserRepository
 import com.example.gymfitness.domain.usecase.meal.GenerateNutritionPlanUseCase
 import com.example.gymfitness.utils.NutritionPlanManager
 import com.example.gymfitness.utils.TokenManager
+import com.example.gymfitness.data.remote.api.AuthApiService
+import com.example.gymfitness.data.remote.api.AuthRequestDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,7 @@ class MealViewModel @Inject constructor(
     private val api: FoodApiService,
     private val dao: MealDao,
     private val mealApi: com.example.gymfitness.data.remote.api.MealApiService,
+    private val authApi: AuthApiService,
     private val mealRepository: MealRepository,
     private val userRepository: UserRepository,
     private val nutritionPlanManager: NutritionPlanManager,
@@ -96,8 +99,19 @@ class MealViewModel @Inject constructor(
             Log.d("SCANNER", "📸 Analyzing captured food image...")
 
             try {
+                // Ensure JWT token exists for backend request authentication
+                if (tokenManager.getToken() == null) {
+                    try {
+                        val authRes = authApi.getAccessToken(AuthRequestDto(deviceId = tokenManager.getUserId()))
+                        tokenManager.saveToken(authRes.access_token)
+                        Log.d("SCANNER", "Acquired guest JWT token successfully")
+                    } catch (authErr: Exception) {
+                        Log.w("SCANNER", "Could not fetch auto-guest token, proceeding with guest headers: ${authErr.message}")
+                    }
+                }
+
                 val body = bitmap.toMultipartBody()
-                val response = api.scanFood(body)
+                val response = api.scanFood(body, userId = tokenManager.getUserId())
 
                 Log.d("SCANNER", "✅ Success: Received ${response.foodName}")
                 _scanAlternatives.value = response.topAlternatives ?: emptyList()

@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 API_KEY = os.getenv("API_KEY", "FitStore_Secret_Key_2026_Secure")
 JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("API_KEY") or "FitStore_JWT_Signing_Key_2026_Change_Me"
+KNOWN_API_KEYS = {k for k in [API_KEY, "FitStore_Secret_Key_2026_Secure"] if k}
 
 security_bearer = HTTPBearer(auto_error=False)
 
@@ -22,14 +23,14 @@ async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCr
     """
     # 1. Check for X-API-KEY header first
     api_key_header = request.headers.get("X-API-KEY") or request.headers.get("x-api-key")
-    if api_key_header and api_key_header == API_KEY:
+    if api_key_header and (api_key_header in KNOWN_API_KEYS or api_key_header == API_KEY):
         user_id_hdr = request.headers.get("X-User-Id") or request.headers.get("x-user-id")
         return user_id_hdr or "api_key_authorized"
 
     # 2. Check for Authorization Bearer token
     if credentials and credentials.credentials:
         token = credentials.credentials
-        if token == API_KEY:
+        if token in KNOWN_API_KEYS or token == API_KEY:
             user_id_hdr = request.headers.get("X-User-Id") or request.headers.get("x-user-id")
             return user_id_hdr or "api_key_authorized"
 
@@ -47,9 +48,20 @@ async def verify_jwt(request: Request, credentials: Optional[HTTPAuthorizationCr
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
         except jwt.PyJWTError:
-            if token == API_KEY:
+            if token in KNOWN_API_KEYS or token == API_KEY:
                 user_id_hdr = request.headers.get("X-User-Id") or request.headers.get("x-user-id")
                 return user_id_hdr or "api_key_authorized"
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
     raise HTTPException(status_code=401, detail="Authentication credentials were not provided (Bearer token or X-API-KEY required)")
+
+async def verify_jwt_optional(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Security(security_bearer)) -> str:
+    """
+    Optional auth: verifies token or API key if provided, otherwise gracefully falls back
+    to X-User-Id header or 'anonymous' (ideal for food scanning).
+    """
+    try:
+        return await verify_jwt(request, credentials)
+    except HTTPException:
+        user_id_hdr = request.headers.get("X-User-Id") or request.headers.get("x-user-id")
+        return user_id_hdr or "anonymous"

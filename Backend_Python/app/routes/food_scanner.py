@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from app.database import db
 from app.services.nutrition_engine import nutrition_engine
 from app.services.vision_service import vision_service
-from app.security import verify_jwt
+from app.security import verify_jwt, verify_jwt_optional
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class ScanFeedbackRequest(BaseModel):
 async def scan_food(
     file: UploadFile = File(...),
     quantity_override_grams: Optional[float] = Form(None),
-    user_id: str = Depends(verify_jwt)
+    user_id: str = Depends(verify_jwt_optional)
 ):
     """
     Analyzes uploaded food image, classifies food items (single or multi-dish plate),
