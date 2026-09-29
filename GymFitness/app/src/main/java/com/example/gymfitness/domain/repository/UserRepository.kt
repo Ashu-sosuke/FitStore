@@ -9,4 +9,5 @@ interface UserRepository {
     fun getProfileFlow(deviceId: String): Flow<UserProfile?>
     suspend fun syncProfile(deviceId: String): Result<UserProfile>
     suspend fun updateStreak(deviceId: String)
+    suspend fun deleteProfile(deviceId: String): Result<Boolean>
 }

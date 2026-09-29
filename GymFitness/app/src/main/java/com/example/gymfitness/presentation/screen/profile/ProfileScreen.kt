@@ -13,7 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -373,16 +376,81 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
 
-            Button(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.Red),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f))
+            // Danger Zone Card: Logout & Wipe System Data
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                border = BorderStroke(1.5.dp, ErrorRed.copy(alpha = 0.5f))
             ) {
-                Text("RESET ALL DATA", fontWeight = FontWeight.Black)
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ErrorRed.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = "Logout",
+                                tint = ErrorRed,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                "Account & System Wipe",
+                                style = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = OffWhite
+                            )
+                            Text(
+                                "Permanently erase data & sign out",
+                                style = Typography.labelSmall,
+                                color = TextMutedDark
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        "Logging out will permanently delete your biometric profile, routine split, workout history, nutrition logs, and credentials across both the local database and cloud server.",
+                        style = Typography.bodySmall.copy(lineHeight = 18.sp),
+                        color = TextMutedDark
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Button(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ErrorRed,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "LOG OUT & DELETE ALL DATA",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 13.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(32.dp))
@@ -390,33 +458,85 @@ fun ProfileScreen(
     }
 
     if (showDeleteDialog) {
+        var isDeleting by remember { mutableStateOf(false) }
+
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
             containerColor = CardSurface,
-            title = {
-                Text("Reset Progress?", style = Typography.titleLarge, color = InkBlack)
+            shape = RoundedCornerShape(22.dp),
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(ErrorRed.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.WarningAmber,
+                        contentDescription = "Warning",
+                        tint = ErrorRed,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
             },
-            text = {
+            title = {
                 Text(
-                    "This will permanently delete your profile and all fitness data from the local database. This cannot be undone.",
-                    style = Typography.bodyMedium,
-                    color = TextMuted
+                    "Log Out & Erase All Data?",
+                    style = Typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    color = OffWhite,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.logoutAndClearData {
-                        navController.navigate(Screen.GetStart.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Are you absolutely sure? This will permanently wipe your profile, workouts, nutrition logs, and step history from both the device and server database. This cannot be undone.",
+                        style = Typography.bodyMedium.copy(lineHeight = 20.sp),
+                        color = TextMutedDark,
+                        textAlign = TextAlign.Center
+                    )
+                    if (isDeleting) {
+                        Spacer(Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            color = ErrorRed,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Wiping user data across system...",
+                            style = Typography.labelSmall,
+                            color = OffWhite
+                        )
                     }
-                }) {
-                    Text("DELETE", color = Color.Red, fontWeight = FontWeight.Black)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isDeleting = true
+                        viewModel.logoutAndClearData {
+                            Toast.makeText(context, "All user data deleted successfully.", Toast.LENGTH_LONG).show()
+                            showDeleteDialog = false
+                            navController.navigate(Screen.GetStart.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    },
+                    enabled = !isDeleting,
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("YES, WIPE & LOG OUT", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("CANCEL", color = InkBlack)
+                if (!isDeleting) {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("CANCEL", color = OffWhite, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         )

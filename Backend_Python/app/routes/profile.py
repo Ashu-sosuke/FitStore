@@ -115,3 +115,22 @@ async def update_profile(device_id: str, profile: UserProfileUpdate = Body(...))
         
     raise HTTPException(status_code=404, detail=f"Profile with deviceId {device_id} not found")
 
+
+@router.delete("/{device_id}", response_description="Delete user profile and all associated data")
+async def delete_profile(device_id: str):
+    await user_profiles_collection.delete_many({
+        "$or": [{"deviceId": device_id}, {"userId": device_id}]
+    })
+    try:
+        from app.database import db, workouts_collection, meals_collection
+        await workouts_collection.delete_many({"$or": [{"deviceId": device_id}, {"userId": device_id}]})
+        await meals_collection.delete_many({"$or": [{"deviceId": device_id}, {"userId": device_id}]})
+        await db["daily_logs"].delete_many({"user_id": device_id})
+        await db["friends"].delete_many({"$or": [{"userId": device_id}, {"friendId": device_id}]})
+        await db["leaderboard_stats"].delete_many({"userId": device_id})
+        await db["scan_feedback"].delete_many({"userId": device_id})
+    except Exception as e:
+        pass
+    return {"status": "success", "message": f"All data for {device_id} deleted."}
+
+

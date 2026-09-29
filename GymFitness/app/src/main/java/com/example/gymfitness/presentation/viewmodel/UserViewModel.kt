@@ -402,16 +402,44 @@ class UserViewModel @Inject constructor(
 
     fun logoutAndClearData(onComplete: () -> Unit) {
         viewModelScope.launch {
+            val activeDeviceId = deviceId
+
+            // 1. Delete remote profile and cascaded server records from MongoDB
+            try {
+                repository.deleteProfile(activeDeviceId)
+            } catch (_: Exception) { }
+
+            // 2. Clear all local Room database tables
             try {
                 db.clearAllTables()
             } catch (_: Exception) { }
-            // Sign out of Firebase to clear the persisted auth session
+
+            // 3. Clear all SharedPreferences across the entire app
+            try {
+                context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                context.getSharedPreferences("step_counter_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                context.getSharedPreferences("nutrition_plan_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                context.getSharedPreferences("device_id", Context.MODE_PRIVATE).edit().clear().apply()
+            } catch (_: Exception) { }
+
+            // 4. Sign out of Firebase to clear persistent auth sessions
             try {
                 FirebaseAuth.getInstance().signOut()
             } catch (_: Exception) { }
+
+            // 5. Clear token manager active session
             tokenManager.clearUserId()
             tokenManager.clearToken()
+
+            // 6. Reset local in-memory viewmodel state
+            name = ""
+            gender = "Male"
+            age = "24"
+            weight = "70.0"
+            height = "175.0"
+            currentStep = 0
             _startDestination.value = Screen.GetStart.route
+
             onComplete()
         }
     }

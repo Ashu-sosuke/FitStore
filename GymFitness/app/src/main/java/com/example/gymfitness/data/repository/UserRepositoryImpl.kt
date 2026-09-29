@@ -103,4 +103,16 @@ class UserRepositoryImpl @Inject constructor(
         userDao.insertUser(updatedUser)
         syncManager.scheduleSync()
     }
+
+    override suspend fun deleteProfile(deviceId: String): Result<Boolean> {
+        return try {
+            try {
+                profileApi.deleteProfile(deviceId)
+            } catch (_: Exception) { }
+            userDao.clearUserData()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

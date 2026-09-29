@@ -16,4 +16,7 @@ interface ProfileApiService {
         @Path("deviceId") deviceId: String,
         @Body profile: ProfileCreateDto
     ): ProfileDto
+
+    @DELETE("api/profile/{deviceId}")
+    suspend fun deleteProfile(@Path("deviceId") deviceId: String): retrofit2.Response<Map<String, Any>>
 }
